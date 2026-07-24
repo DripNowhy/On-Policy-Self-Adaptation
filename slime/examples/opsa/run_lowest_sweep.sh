@@ -15,6 +15,13 @@ MEGATRON_PATH="${MEGATRON_PATH:-}"
 RAY_ADDRESS="${RAY_ADDRESS:-}"
 RAY_PORT="${RAY_PORT:-6379}"
 DASHBOARD_PORT="${DASHBOARD_PORT:-8265}"
+WANDB_PROJECT="${WANDB_PROJECT:-}"
+WANDB_GROUP="${WANDB_GROUP:-}"
+WANDB_TEAM="${WANDB_TEAM:-}"
+WANDB_MODE="${WANDB_MODE:-}"
+WANDB_DIR="${WANDB_DIR:-}"
+WANDB_LOG_ALL_METRICS="${WANDB_LOG_ALL_METRICS:-false}"
+WANDB_OPEN_METRICS="${WANDB_OPEN_METRICS:-false}"
 LIGHT_CHECKPOINT=false
 DRY_RUN=false
 
@@ -37,6 +44,13 @@ Options:
   --ray-address URL           Submit every run to an existing Ray dashboard
   --ray-port PORT             Local Ray GCS port (default: 6379)
   --dashboard-port PORT       Local Ray dashboard port (default: 8265)
+  --wandb-project NAME        Enable W&B and log every run to this project
+  --wandb-group NAME          Optional shared group/run name for the sweep
+  --wandb-team NAME           W&B entity/team
+  --wandb-mode MODE           online, offline, or disabled
+  --wandb-dir PATH            Directory for local W&B files
+  --wandb-log-all-metrics     Log all Slime metrics instead of the compact set
+  --wandb-open-metrics        Add SGLang OpenMetrics to online W&B runs
   --light-checkpoint          Produce non-resumable weight-only checkpoints
   --dry-run                   Print all resolved commands without running them
   -h, --help                  Show this help
@@ -53,6 +67,19 @@ require_value() {
       die "$1 requires a value"
    fi
 }
+
+normalize_boolean() {
+   local name="$1"
+   local value="$2"
+   case "$value" in
+      1|true|TRUE|yes|YES|on|ON) echo true ;;
+      0|false|FALSE|no|NO|off|OFF|"") echo false ;;
+      *) die "$name must be a boolean (true/false, 1/0, yes/no, or on/off)" ;;
+   esac
+}
+
+WANDB_LOG_ALL_METRICS="$(normalize_boolean WANDB_LOG_ALL_METRICS "$WANDB_LOG_ALL_METRICS")"
+WANDB_OPEN_METRICS="$(normalize_boolean WANDB_OPEN_METRICS "$WANDB_OPEN_METRICS")"
 
 while [ "$#" -gt 0 ]; do
    case "$1" in
@@ -111,6 +138,39 @@ while [ "$#" -gt 0 ]; do
          DASHBOARD_PORT="$2"
          shift 2
          ;;
+      --wandb-project)
+         require_value "$@"
+         WANDB_PROJECT="$2"
+         shift 2
+         ;;
+      --wandb-group)
+         require_value "$@"
+         WANDB_GROUP="$2"
+         shift 2
+         ;;
+      --wandb-team)
+         require_value "$@"
+         WANDB_TEAM="$2"
+         shift 2
+         ;;
+      --wandb-mode)
+         require_value "$@"
+         WANDB_MODE="$2"
+         shift 2
+         ;;
+      --wandb-dir)
+         require_value "$@"
+         WANDB_DIR="$2"
+         shift 2
+         ;;
+      --wandb-log-all-metrics)
+         WANDB_LOG_ALL_METRICS=true
+         shift
+         ;;
+      --wandb-open-metrics)
+         WANDB_OPEN_METRICS=true
+         shift
+         ;;
       --light-checkpoint)
          LIGHT_CHECKPOINT=true
          shift
@@ -139,6 +199,15 @@ if [ -z "$FRACTIONS" ]; then
 fi
 if [ "$DRY_RUN" = false ] && [ -z "$SAVE_ROOT" ]; then
    die "--save-root is required"
+fi
+if [ -n "$WANDB_PROJECT" ]; then
+   case "$WANDB_MODE" in
+      ""|online|offline|disabled) ;;
+      *) die "--wandb-mode must be online, offline, or disabled" ;;
+   esac
+   if [ "$WANDB_OPEN_METRICS" = true ] && [ "$WANDB_MODE" != "" ] && [ "$WANDB_MODE" != online ]; then
+      die "--wandb-open-metrics requires online W&B mode"
+   fi
 fi
 
 IFS=',' read -r -a FRACTION_VALUES <<< "$FRACTIONS"
@@ -176,6 +245,27 @@ for fraction in "${FRACTION_VALUES[@]}"; do
    fi
    if [ -n "$RAY_ADDRESS" ]; then
       RUN_ARGS+=(--ray-address "$RAY_ADDRESS")
+   fi
+   if [ -n "$WANDB_PROJECT" ]; then
+      RUN_ARGS+=(--wandb-project "$WANDB_PROJECT")
+      if [ -n "$WANDB_GROUP" ]; then
+         RUN_ARGS+=(--wandb-group "$WANDB_GROUP")
+      fi
+      if [ -n "$WANDB_TEAM" ]; then
+         RUN_ARGS+=(--wandb-team "$WANDB_TEAM")
+      fi
+      if [ -n "$WANDB_MODE" ]; then
+         RUN_ARGS+=(--wandb-mode "$WANDB_MODE")
+      fi
+      if [ -n "$WANDB_DIR" ]; then
+         RUN_ARGS+=(--wandb-dir "$WANDB_DIR")
+      fi
+      if [ "$WANDB_LOG_ALL_METRICS" = true ]; then
+         RUN_ARGS+=(--wandb-log-all-metrics)
+      fi
+      if [ "$WANDB_OPEN_METRICS" = true ]; then
+         RUN_ARGS+=(--wandb-open-metrics)
+      fi
    fi
    if [ "$LIGHT_CHECKPOINT" = true ]; then
       RUN_ARGS+=(--light-checkpoint)

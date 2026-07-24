@@ -108,6 +108,39 @@ bash examples/opsa/run_lowest_sweep.sh --model qwen3-1.7b --dry-run
 See the [full reproducibility guide](slime/examples/opsa/README.md) before
 removing `--dry-run`.
 
+## Optional W&B tracking
+
+W&B is off by default and is enabled only when `--wandb-project` (or
+`WANDB_PROJECT`) is provided. The launcher automatically names an unspecified
+group from the model, preset, and fraction.
+
+```bash
+bash examples/opsa/run_opsa.sh \
+  --model qwen3-1.7b --preset opsa --fraction 0.2 \
+  --wandb-project opsa --wandb-mode online --dry-run
+```
+
+The compact default sends exactly the following metrics; the matching
+`train/step`, `rollout/step`, or `eval/step` key is added automatically:
+
+- `train/{loss,entropy_loss,grad_norm,lr-pg_*}`;
+- `rollout/opsa/{selected_fraction,advantage_mean}`;
+- `rollout/{log_probs,entropy,truncated_ratio,repetition_frac}`;
+- `rollout/response_len/{min,mean,max}`;
+- `eval/<dataset>-pass@{1,4}`;
+- `eval/<dataset>/response_len/{min,mean,max}`;
+- `perf/{rollout_time,actor_train_tok_per_s}`.
+
+It does not publish `train/opsa/*`. Use
+`--wandb-log-all-metrics` for the full Slime stream and
+`--wandb-open-metrics` for SGLang OpenMetrics; both are explicit opt-ins.
+
+The launcher has no API-key argument and never puts a key in its generated
+command or dry-run output. Inject `WANDB_API_KEY` through the local environment
+or the existing Ray cluster's secret mechanism. See the
+[tracking guide](slime/examples/opsa/README.md#optional-wb-tracking) for all CLI
+and environment options.
+
 ## Public OPSA interface
 
 ```text

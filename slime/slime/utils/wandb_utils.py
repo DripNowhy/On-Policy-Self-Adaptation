@@ -6,6 +6,109 @@ import wandb
 
 logger = logging.getLogger(__name__)
 
+# OPSA runs intentionally publish only stable, portable experiment metadata.
+# In particular, paths, service addresses, credentials, and arbitrary environment
+# variables must not become part of the public run config.
+_OPSA_CONFIG_KEYS = (
+    # Method.
+    "advantage_estimator",
+    "opsa_mode",
+    "opsa_token_fraction",
+    "opsa_advantage_min",
+    "opsa_advantage_max",
+    "opsa_fixed_advantage",
+    # Model architecture.
+    "model_name",
+    "num_layers",
+    "hidden_size",
+    "ffn_hidden_size",
+    "num_attention_heads",
+    "num_query_groups",
+    "kv_channels",
+    "seq_length",
+    "max_position_embeddings",
+    "position_embedding_type",
+    "rotary_percent",
+    "rotary_base",
+    "normalization",
+    "norm_epsilon",
+    "swiglu",
+    "untie_embeddings_and_output_weights",
+    "qk_layernorm",
+    "vocab_size",
+    "padded_vocab_size",
+    # Training and optimizer.
+    "train_backend",
+    "train_iters",
+    "num_epoch",
+    "num_rollout",
+    "global_batch_size",
+    "micro_batch_size",
+    "num_steps_per_rollout",
+    "use_dynamic_batch_size",
+    "max_tokens_per_gpu",
+    "optimizer",
+    "optimizer_cpu_offload",
+    "overlap_cpu_optimizer_d2h_h2d",
+    "use_precision_aware_optimizer",
+    "recompute_granularity",
+    "recompute_method",
+    "recompute_num_layers",
+    "lr",
+    "min_lr",
+    "lr_decay_style",
+    "lr_decay_iters",
+    "lr_warmup_iters",
+    "lr_warmup_fraction",
+    "weight_decay",
+    "adam_beta1",
+    "adam_beta2",
+    "adam_eps",
+    "clip_grad",
+    "bf16",
+    "fp16",
+    "seed",
+    "entropy_coef",
+    "save_interval",
+    # Resource layout.
+    "actor_num_nodes",
+    "actor_num_gpus_per_node",
+    "rollout_num_gpus",
+    "rollout_num_gpus_per_engine",
+    "num_gpus_per_node",
+    "tensor_model_parallel_size",
+    "pipeline_model_parallel_size",
+    "expert_model_parallel_size",
+    "context_parallel_size",
+    "sequence_parallel",
+    "colocate",
+    "offload_train",
+    "offload_rollout",
+    # Rollout and evaluation.
+    "rollout_batch_size",
+    "n_samples_per_prompt",
+    "rollout_temperature",
+    "rollout_top_p",
+    "rollout_top_k",
+    "rollout_max_context_len",
+    "rollout_max_prompt_len",
+    "rollout_max_response_len",
+    "rollout_seed",
+    "disable_thinking",
+    "eval_interval",
+    "n_samples_per_eval_prompt",
+    "eval_temperature",
+    "eval_top_p",
+    "eval_top_k",
+    "eval_max_context_len",
+    "eval_max_prompt_len",
+    "eval_max_response_len",
+)
+
+
+def _is_opsa(args) -> bool:
+    return getattr(args, "advantage_estimator", None) == "opsa"
+
 
 def _is_offline_mode(args) -> bool:
     """Detect whether W&B should run in offline mode.
@@ -93,6 +196,9 @@ def reinit_wandb_primary_with_open_metrics(args, router_addr):
         return
     if router_addr is None:
         return
+    if _is_opsa(args) and not getattr(args, "wandb_open_metrics", False):
+        logger.info("Skipping SGLang OpenMetrics for OPSA. Pass --wandb-open-metrics to upload sgl_engine.* metrics.")
+        return
     if os.environ.get("SLIME_DISABLE_WANDB_OPEN_METRICS_REINIT", "").lower() in {"1", "true", "yes", "on"}:
         logger.info("Skipping W&B open-metrics reinit because SLIME_DISABLE_WANDB_OPEN_METRICS_REINIT is set.")
         return
@@ -140,6 +246,10 @@ def reinit_wandb_primary_with_open_metrics(args, router_addr):
 
 def _compute_config_for_logging(args):
     output = deepcopy(args.__dict__)
+    output.pop("wandb_key", None)
+
+    if _is_opsa(args):
+        output = {key: output[key] for key in _OPSA_CONFIG_KEYS if key in output}
 
     whitelist_env_vars = [
         "SLURM_JOB_ID",
@@ -179,7 +289,7 @@ def init_wandb_secondary(args):
         "id": wandb_run_id,
         "entity": args.wandb_team,
         "project": args.wandb_project,
-        "config": args.__dict__,
+        "config": _compute_config_for_logging(args),
         "resume": "allow",
         "reinit": True,
         "settings": wandb.Settings(**settings_kwargs),

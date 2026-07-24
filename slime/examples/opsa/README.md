@@ -120,6 +120,57 @@ Checkpoints include optimizer and RNG state by default and can be resumed with
 `--resume-from`. `--light-checkpoint` explicitly creates smaller,
 non-resumable checkpoints.
 
+## Optional W&B tracking
+
+W&B is disabled by default. Supplying `--wandb-project` (or setting
+`WANDB_PROJECT`) enables it. If `--wandb-group` is omitted, the launcher creates
+a stable group/run name containing the model, method preset, and fraction, for
+example `opsa-qwen3-1.7b-opsa-lowest20`.
+
+The default compact metric set is exactly:
+
+- `train/{loss,entropy_loss,grad_norm,lr-pg_*}`;
+- `rollout/opsa/{selected_fraction,advantage_mean}`;
+- `rollout/{log_probs,entropy,truncated_ratio,repetition_frac}`;
+- `rollout/response_len/{min,mean,max}`;
+- arbitrary-dataset `eval/<dataset>-pass@{1,4}`;
+- arbitrary-dataset `eval/<dataset>/response_len/{min,mean,max}`;
+- `perf/{rollout_time,actor_train_tok_per_s}`;
+- the matching `train/step`, `rollout/step`, or `eval/step` key, added
+  automatically.
+
+In particular, the compact mode does not publish `train/opsa/*`.
+
+Use `--wandb-log-all-metrics` only when the full native Slime metric stream is
+needed. SGLang `sgl_engine.*` OpenMetrics are also excluded by default; opt in
+separately with `--wandb-open-metrics` for an online run.
+
+```bash
+# WANDB_API_KEY must already be injected into this shell or the Ray cluster.
+bash examples/opsa/run_opsa.sh \
+  --model qwen3-1.7b \
+  --preset opsa \
+  --fraction 0.2 \
+  --wandb-project opsa \
+  --wandb-team your-team \
+  --wandb-mode online \
+  --dry-run
+```
+
+The optional controls are `--wandb-group`, `--wandb-team`,
+`--wandb-mode {online,offline,disabled}`, and `--wandb-dir`, with matching
+`WANDB_GROUP`, `WANDB_TEAM`, `WANDB_MODE`, and `WANDB_DIR` environment
+variables. `WANDB_LOG_ALL_METRICS=1` and `WANDB_OPEN_METRICS=1` are the
+environment equivalents of the two opt-in metric flags. The sweep launcher
+forwards every W&B option; when no custom group is supplied, each fraction gets
+its own automatically named run.
+
+There is intentionally no API-key launcher option. The key is never included in
+the generated `train.py` command or dry-run output. For a local Ray cluster,
+inject `WANDB_API_KEY` into the environment before starting the launcher. For an
+existing cluster, configure it through that cluster's secret/environment
+mechanism.
+
 ## Lowest-token sweep
 
 The sweep launcher runs 10%, 20%, 30%, and 40% sequentially and creates a

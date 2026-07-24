@@ -18,6 +18,13 @@ MEGATRON_PATH="${MEGATRON_PATH:-}"
 RAY_ADDRESS="${RAY_ADDRESS:-}"
 RAY_PORT="${RAY_PORT:-6379}"
 DASHBOARD_PORT="${DASHBOARD_PORT:-8265}"
+WANDB_PROJECT="${WANDB_PROJECT:-}"
+WANDB_GROUP="${WANDB_GROUP:-}"
+WANDB_TEAM="${WANDB_TEAM:-}"
+WANDB_MODE="${WANDB_MODE:-}"
+WANDB_DIR="${WANDB_DIR:-}"
+WANDB_LOG_ALL_METRICS="${WANDB_LOG_ALL_METRICS:-false}"
+WANDB_OPEN_METRICS="${WANDB_OPEN_METRICS:-false}"
 LIGHT_CHECKPOINT=false
 DRY_RUN=false
 
@@ -48,8 +55,20 @@ Runtime:
   --dry-run                   Print the resolved command without checking paths
   -h, --help                  Show this help
 
-The corresponding uppercase environment variables may be used for path and Ray
-options. Command-line values take precedence.
+W&B (disabled unless a project is provided):
+  --wandb-project NAME        Enable W&B and log to this project
+  --wandb-group NAME          Group/run name (default includes model, preset, fraction)
+  --wandb-team NAME           W&B entity/team
+  --wandb-mode MODE           online, offline, or disabled
+  --wandb-dir PATH            Directory for local W&B files
+  --wandb-log-all-metrics     Log all Slime metrics instead of the compact set
+  --wandb-open-metrics        Add SGLang OpenMetrics to an online W&B run
+
+The corresponding uppercase environment variables may be used. Boolean W&B
+environment variables accept true/false, 1/0, yes/no, or on/off. Command-line
+values take precedence. API keys are never accepted as launcher arguments or
+placed in printed commands; inject WANDB_API_KEY through the environment or a
+cluster secret.
 EOF
 }
 
@@ -63,6 +82,19 @@ require_value() {
       die "$1 requires a value"
    fi
 }
+
+normalize_boolean() {
+   local name="$1"
+   local value="$2"
+   case "$value" in
+      1|true|TRUE|yes|YES|on|ON) echo true ;;
+      0|false|FALSE|no|NO|off|OFF|"") echo false ;;
+      *) die "$name must be a boolean (true/false, 1/0, yes/no, or on/off)" ;;
+   esac
+}
+
+WANDB_LOG_ALL_METRICS="$(normalize_boolean WANDB_LOG_ALL_METRICS "$WANDB_LOG_ALL_METRICS")"
+WANDB_OPEN_METRICS="$(normalize_boolean WANDB_OPEN_METRICS "$WANDB_OPEN_METRICS")"
 
 while [ "$#" -gt 0 ]; do
    case "$1" in
@@ -131,6 +163,39 @@ while [ "$#" -gt 0 ]; do
          DASHBOARD_PORT="$2"
          shift 2
          ;;
+      --wandb-project)
+         require_value "$@"
+         WANDB_PROJECT="$2"
+         shift 2
+         ;;
+      --wandb-group)
+         require_value "$@"
+         WANDB_GROUP="$2"
+         shift 2
+         ;;
+      --wandb-team)
+         require_value "$@"
+         WANDB_TEAM="$2"
+         shift 2
+         ;;
+      --wandb-mode)
+         require_value "$@"
+         WANDB_MODE="$2"
+         shift 2
+         ;;
+      --wandb-dir)
+         require_value "$@"
+         WANDB_DIR="$2"
+         shift 2
+         ;;
+      --wandb-log-all-metrics)
+         WANDB_LOG_ALL_METRICS=true
+         shift
+         ;;
+      --wandb-open-metrics)
+         WANDB_OPEN_METRICS=true
+         shift
+         ;;
       --light-checkpoint)
          LIGHT_CHECKPOINT=true
          shift
@@ -188,6 +253,15 @@ if [ "$RAY_PORT" -eq "$DASHBOARD_PORT" ]; then
 fi
 if [ "$LIGHT_CHECKPOINT" = true ] && [ -n "$RESUME_FROM" ]; then
    die "--light-checkpoint cannot be combined with --resume-from"
+fi
+if [ -n "$WANDB_PROJECT" ]; then
+   case "$WANDB_MODE" in
+      ""|online|offline|disabled) ;;
+      *) die "--wandb-mode must be online, offline, or disabled" ;;
+   esac
+   if [ "$WANDB_OPEN_METRICS" = true ] && [ "$WANDB_MODE" != "" ] && [ "$WANDB_MODE" != online ]; then
+      die "--wandb-open-metrics requires online W&B mode"
+   fi
 fi
 
 source "${SCRIPT_DIR}/models/${MODEL}.sh"
@@ -369,6 +443,34 @@ SGLANG_ARGS=(
    --sglang-mem-fraction-static "$SGLANG_MEM_FRACTION_STATIC"
 )
 
+WANDB_ARGS=()
+if [ -n "$WANDB_PROJECT" ]; then
+   fraction_percentage="$(awk -v value="$TOKEN_FRACTION" 'BEGIN { printf "%g", value * 100 }')"
+   fraction_percentage="${fraction_percentage//./p}"
+   WANDB_GROUP="${WANDB_GROUP:-opsa-${MODEL}-${PRESET}-lowest${fraction_percentage}}"
+   WANDB_ARGS=(
+      --use-wandb
+      --wandb-project "$WANDB_PROJECT"
+      --wandb-group "$WANDB_GROUP"
+      --disable-wandb-random-suffix
+   )
+   if [ -n "$WANDB_TEAM" ]; then
+      WANDB_ARGS+=(--wandb-team "$WANDB_TEAM")
+   fi
+   if [ -n "$WANDB_MODE" ]; then
+      WANDB_ARGS+=(--wandb-mode "$WANDB_MODE")
+   fi
+   if [ -n "$WANDB_DIR" ]; then
+      WANDB_ARGS+=(--wandb-dir "$WANDB_DIR")
+   fi
+   if [ "$WANDB_LOG_ALL_METRICS" = true ]; then
+      WANDB_ARGS+=(--wandb-log-all-metrics)
+   fi
+   if [ "$WANDB_OPEN_METRICS" = true ]; then
+      WANDB_ARGS+=(--wandb-open-metrics)
+   fi
+fi
+
 MISC_ARGS=(
    --attention-dropout 0.0
    --hidden-dropout 0.0
@@ -390,6 +492,7 @@ TRAIN_COMMAND=(
    "${PERF_ARGS[@]}"
    "${EVAL_ARGS[@]}"
    "${SGLANG_ARGS[@]}"
+   "${WANDB_ARGS[@]}"
    "${MISC_ARGS[@]}"
 )
 
@@ -414,6 +517,13 @@ echo "Actor/Rollout GPUs:  ${ACTOR_GPUS}/${ROLLOUT_GPUS}"
 echo "Training TP:         $TENSOR_MODEL_PARALLEL_SIZE"
 echo "Rollout/Eval length: ${ROLLOUT_MAX_RESPONSE_LEN}/${EVAL_MAX_RESPONSE_LEN}"
 echo "Checkpoint mode:     $([ "$LIGHT_CHECKPOINT" = true ] && echo light || echo resumable)"
+if [ -n "$WANDB_PROJECT" ]; then
+   echo "W&B:                 project=$WANDB_PROJECT group=$WANDB_GROUP mode=${WANDB_MODE:-online}"
+   echo "W&B metrics:         $([ "$WANDB_LOG_ALL_METRICS" = true ] && echo all || echo compact)"
+   echo "W&B OpenMetrics:     $([ "$WANDB_OPEN_METRICS" = true ] && echo enabled || echo disabled)"
+else
+   echo "W&B:                 disabled"
+fi
 
 if [ "$DRY_RUN" = true ]; then
    if [ -n "$RAY_ADDRESS" ]; then

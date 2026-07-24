@@ -99,6 +99,37 @@ bash examples/opsa/run_lowest_sweep.sh --model qwen3-1.7b --dry-run
 
 在移除 `--dry-run` 之前，请阅读[完整复现指南](slime/examples/opsa/README.md)。
 
+## 可选 W&B 记录
+
+W&B 默认关闭，只有提供 `--wandb-project`（或 `WANDB_PROJECT`）时才启用。
+如果没有指定 group，launcher 会根据 model、preset 和 fraction 自动命名。
+
+```bash
+bash examples/opsa/run_opsa.sh \
+  --model qwen3-1.7b --preset opsa --fraction 0.2 \
+  --wandb-project opsa --wandb-mode online --dry-run
+```
+
+默认精简模式只发送下列指标；匹配的 `train/step`、`rollout/step` 或
+`eval/step` 会自动加入：
+
+- `train/{loss,entropy_loss,grad_norm,lr-pg_*}`；
+- `rollout/opsa/{selected_fraction,advantage_mean}`；
+- `rollout/{log_probs,entropy,truncated_ratio,repetition_frac}`；
+- `rollout/response_len/{min,mean,max}`；
+- `eval/<dataset>-pass@{1,4}`；
+- `eval/<dataset>/response_len/{min,mean,max}`；
+- `perf/{rollout_time,actor_train_tok_per_s}`。
+
+精简模式不发布 `train/opsa/*`。
+完整 Slime metrics 需要显式添加
+`--wandb-log-all-metrics`；SGLang OpenMetrics 需要另行添加
+`--wandb-open-metrics`。
+
+Launcher 不提供 API-key 参数，也不会把 key 写入生成命令或 dry-run 输出。
+请通过本地环境或已有 Ray 集群的 secret 机制注入 `WANDB_API_KEY`。所有 CLI 和
+环境变量选项见[记录说明](slime/examples/opsa/README.md#optional-wb-tracking)。
+
 ## OPSA 公开参数
 
 ```text

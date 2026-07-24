@@ -992,6 +992,24 @@ def get_slime_extra_args_provider(add_custom_arguments=None):
             # wandb parameters
             parser.add_argument("--use-wandb", action="store_true", default=False)
             parser.add_argument(
+                "--wandb-log-all-metrics",
+                action="store_true",
+                default=False,
+                help=(
+                    "Log the complete native Slime metric set. OPSA uses a compact metric whitelist by default; "
+                    "non-OPSA logging is unchanged."
+                ),
+            )
+            parser.add_argument(
+                "--wandb-open-metrics",
+                action="store_true",
+                default=False,
+                help=(
+                    "Opt in to scraping SGLang sgl_engine.* OpenMetrics for OPSA online runs. "
+                    "Non-OPSA runs preserve the existing automatic OpenMetrics behavior."
+                ),
+            )
+            parser.add_argument(
                 "--wandb-mode",
                 type=str,
                 default=None,
