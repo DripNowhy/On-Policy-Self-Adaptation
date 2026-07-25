@@ -19,7 +19,8 @@ _OPSA_COMPACT_EXACT_METRICS = {
     "perf/actor_train_tok_per_s",
 }
 _OPSA_RESPONSE_LENGTH_STATS = {"min", "mean", "max"}
-_OPSA_EVAL_PASSRATE_SUFFIXES = ("-pass@1", "-pass@4")
+_OPSA_EVAL_SCORE_SUFFIXES = ("-avg@4", "-pass@4")
+_OPSA_EVAL_SAMPLE_METRIC_SUFFIXES = ("/repetition_frac", "/truncated_ratio")
 
 
 _LOGGER_CONFIGURED = False
@@ -67,7 +68,9 @@ def _is_compact_opsa_metric(metric_name: str) -> bool:
         return True
     if metric_name.startswith("train/lr-pg_"):
         return True
-    if metric_name.startswith("eval/") and metric_name.endswith(_OPSA_EVAL_PASSRATE_SUFFIXES):
+    if metric_name.startswith("eval/") and metric_name.endswith(_OPSA_EVAL_SCORE_SUFFIXES):
+        return True
+    if metric_name.startswith("eval/") and metric_name.endswith(_OPSA_EVAL_SAMPLE_METRIC_SUFFIXES):
         return True
 
     prefix, separator, statistic = metric_name.rpartition("/")

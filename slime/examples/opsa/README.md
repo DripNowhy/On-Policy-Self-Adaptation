@@ -133,7 +133,8 @@ The default compact metric set is exactly:
 - `rollout/opsa/{selected_fraction,advantage_mean}`;
 - `rollout/{log_probs,entropy,truncated_ratio,repetition_frac}`;
 - `rollout/response_len/{min,mean,max}`;
-- arbitrary-dataset `eval/<dataset>-pass@{1,4}`;
+- arbitrary-dataset `eval/<dataset>-{avg@4,pass@4}`;
+- arbitrary-dataset `eval/<dataset>/{repetition_frac,truncated_ratio}`;
 - arbitrary-dataset `eval/<dataset>/response_len/{min,mean,max}`;
 - `perf/{rollout_time,actor_train_tok_per_s}`;
 - the matching `train/step`, `rollout/step`, or `eval/step` key, added

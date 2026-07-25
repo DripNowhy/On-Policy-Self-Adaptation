@@ -127,7 +127,8 @@ The compact default sends exactly the following metrics; the matching
 - `rollout/opsa/{selected_fraction,advantage_mean}`;
 - `rollout/{log_probs,entropy,truncated_ratio,repetition_frac}`;
 - `rollout/response_len/{min,mean,max}`;
-- `eval/<dataset>-pass@{1,4}`;
+- `eval/<dataset>-{avg@4,pass@4}`;
+- `eval/<dataset>/{repetition_frac,truncated_ratio}`;
 - `eval/<dataset>/response_len/{min,mean,max}`;
 - `perf/{rollout_time,actor_train_tok_per_s}`.
 
