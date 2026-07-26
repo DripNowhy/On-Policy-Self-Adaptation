@@ -8,6 +8,7 @@ SLIME_ROOT="$(cd -- "${SCRIPT_DIR}/../.." >/dev/null 2>&1 && pwd)"
 MODEL="qwen3-1.7b"
 PRESET="opsa"
 TOKEN_FRACTION="0.2"
+NUM_ROLLOUT_OVERRIDE="${NUM_ROLLOUT_OVERRIDE:-}"
 HF_CHECKPOINT="${HF_CHECKPOINT:-}"
 ACTOR_CHECKPOINT="${ACTOR_CHECKPOINT:-${REF_LOAD:-}}"
 RESUME_FROM="${RESUME_FROM:-}"
@@ -37,6 +38,7 @@ Method:
   --model NAME                qwen3-1.7b, qwen3-4b, or qwen3.5-9b
   --preset NAME               opsa, fixed-negative, or fixed-positive
   --fraction FLOAT            Lowest-token fraction in (0, 1] (default: 0.2)
+  --steps INTEGER             Override the model preset's training steps
 
 Paths:
   --hf-checkpoint PATH        Hugging Face checkpoint used by rollout
@@ -111,6 +113,11 @@ while [ "$#" -gt 0 ]; do
       --fraction)
          require_value "$@"
          TOKEN_FRACTION="$2"
+         shift 2
+         ;;
+      --steps)
+         require_value "$@"
+         NUM_ROLLOUT_OVERRIDE="$2"
          shift 2
          ;;
       --hf-checkpoint)
@@ -230,6 +237,9 @@ fi
 if ! awk -v fraction="$TOKEN_FRACTION" 'BEGIN { exit !(fraction > 0 && fraction <= 1) }'; then
    die "--fraction must be a number in (0, 1]"
 fi
+if [ -n "$NUM_ROLLOUT_OVERRIDE" ] && ! [[ "$NUM_ROLLOUT_OVERRIDE" =~ ^[1-9][0-9]*$ ]]; then
+   die "--steps/NUM_ROLLOUT_OVERRIDE must be a positive integer"
+fi
 
 validate_port() {
    local option="$1"
@@ -270,6 +280,9 @@ if [ ! -f "$MODEL_CONFIG" ]; then
    die "model definition not found: $MODEL_CONFIG"
 fi
 source "$MODEL_CONFIG"
+if [ -n "$NUM_ROLLOUT_OVERRIDE" ]; then
+   NUM_ROLLOUT="$NUM_ROLLOUT_OVERRIDE"
+fi
 
 TOTAL_GPUS=$((ACTOR_GPUS + ROLLOUT_GPUS))
 if [ $((ACTOR_GPUS % TENSOR_MODEL_PARALLEL_SIZE)) -ne 0 ]; then
@@ -515,6 +528,7 @@ echo "Preset:              $PRESET"
 echo "Lowest fraction:     $TOKEN_FRACTION"
 echo "Actor/Rollout GPUs:  ${ACTOR_GPUS}/${ROLLOUT_GPUS}"
 echo "Training TP:         $TENSOR_MODEL_PARALLEL_SIZE"
+echo "Training steps:      $NUM_ROLLOUT"
 echo "Rollout/Eval length: ${ROLLOUT_MAX_RESPONSE_LEN}/${EVAL_MAX_RESPONSE_LEN}"
 echo "Checkpoint mode:     $([ "$LIGHT_CHECKPOINT" = true ] && echo light || echo resumable)"
 if [ -n "$WANDB_PROJECT" ]; then
