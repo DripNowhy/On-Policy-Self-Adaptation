@@ -1,40 +1,49 @@
-# On-Policy Self-Adaptation (OPSA)
+<div align="center">
 
-[中文](README_zh.md)
+# OPSA: On-Policy Self-Adaptation
 
-OPSA is a teacher-free on-policy training method. It improves a policy using
-only the policy's own token probabilities and entropies, without a teacher
-model, reward model, reference-model forward pass, or task reward.
+**Teacher-free on-policy training from the policy's own token probabilities and entropies.**
 
-![Overview of On-Policy Self-Adaptation](assets/opsa-overview.png)
+[![Code](https://img.shields.io/badge/CODE-000000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/DripNowhy/On-Policy-Self-Adaptation)
+[![W&B Logs](https://img.shields.io/badge/W%26B%20TRAINING%20LOGS-%2300B4AB?style=for-the-badge&logo=weightsandbiases&logoColor=white&labelColor=000000)](https://wandb.ai/whywhyyy0731-purdue-university/opsa/workspace)
+[![Reproduce](https://img.shields.io/badge/REPRODUCE-%23FFD14D?style=for-the-badge&logo=gnubash&logoColor=black)](#reproduce-opsa)
+[![Slime](https://img.shields.io/badge/BUILT%20ON%20SLIME-6F42C1?style=for-the-badge&logo=python&logoColor=white)](https://github.com/THUDM/slime)
+[![License](https://img.shields.io/badge/APACHE--2.0-A42C25?style=for-the-badge&logo=apache&logoColor=white)](LICENSE)
 
-## Method
+**English** · [中文](README_zh.md)
 
-On each data-parallel rank, OPSA ranks the valid response tokens in the local
-packed batch by log probability recomputed by the current actor. For \(N\)
-valid tokens and selection fraction \(f\), it selects
+<p>
+  <a href="#introduction">📖 Introduction</a> •
+  <a href="#results">📊 Results</a> •
+  <a href="#reproduce-opsa">🚀 Reproduce OPSA</a> •
+  <a href="#dataset-preparation">🗂️ Dataset Preparation</a>
+</p>
+<p>
+  <a href="#training-logs">📈 Training Logs</a> •
+  <a href="#license">📄 License</a>
+</p>
 
-$$
-K = \max(1, \lfloor fN \rfloor)
-$$
+</div>
 
-tokens with the lowest log probabilities. Entropy is min-max normalized within
-the selected set, and the token-level advantage is
+<a id="introduction"></a>
 
-$$
-r_i = \frac{H_i-H_{\min}}{H_{\max}-H_{\min}},
-\qquad
-A_i = A_{\max} + (A_{\min}-A_{\max})r_i.
-$$
+## Introduction
 
-The default configuration uses \(f=0.2\), \(A_{\min}=-1.0\), and
-\(A_{\max}=-0.5\). If all selected entropies are equal, every selected token
-receives \(-1.0\). Unselected tokens are excluded from both the policy-loss
-numerator and denominator.
+OPSA improves a policy without a teacher model, reward model, reference-model
+forward pass, or task reward. The canonical configuration trains only the 20%
+of valid response tokens with the lowest actor log probabilities and assigns
+entropy-adaptive negative advantages between `-0.5` and `-1.0`. All other
+tokens are excluded from the policy loss.
+
+<p align="center">
+  <img src="assets/opsa-overview.png" alt="Overview of On-Policy Self-Adaptation" width="96%">
+</p>
+
+<a id="results"></a>
 
 ## Results
 
-Each benchmark cell reports **Avg@32 / Pass@32** in percent. All results are
+Each benchmark cell reports **Avg@32 / Pass@32** in percent. All values are
 from the OPSA manuscript.
 
 | Model | Variant | AIME24 | AIME25 | HMMT25 | MBPP+ |
@@ -51,6 +60,8 @@ the questions from DAPO-17k. Evaluation samples 32 responses per prompt with
 temperature `0.7`, top-k `20`, top-p `0.8`, and maximum response length
 `32,768`.
 
+<a id="reproduce-opsa"></a>
+
 ## Reproduce OPSA
 
 ### Installation
@@ -61,10 +72,50 @@ cd On-Policy-Self-Adaptation/slime
 pip install -e .
 ```
 
+<a id="dataset-preparation"></a>
+
+### Dataset preparation
+
+Install the Hugging Face CLI and choose an external data directory:
+
+```bash
+python3 -m pip install --upgrade huggingface_hub
+export OPSA_DATA_DIR=/path/to/opsa-data
+mkdir -p "${OPSA_DATA_DIR}"
+```
+
+Download the exact Slime-ready JSONL files used by this project:
+
+```bash
+hf download zhuzilin/dapo-math-17k dapo-math-17k.jsonl \
+  --repo-type dataset \
+  --revision 2e65612930298bde4c5d58fd97b3f23a483aaff9 \
+  --local-dir "${OPSA_DATA_DIR}/dapo-math-17k"
+
+hf download zhuzilin/aime-2024 aime-2024.jsonl \
+  --repo-type dataset \
+  --revision 1c625e328db94ec7ef7ff169016b097c468d60b9 \
+  --local-dir "${OPSA_DATA_DIR}/aime-2024"
+```
+
+The resulting training file has 17,398 rows and the AIME24 evaluation file has
+30 rows. Both already contain the required `prompt` and `label` fields, so no
+conversion is needed. OPSA training loads only `prompt` and always uses zero
+task reward; `label` is read only during evaluation.
+
+The training JSONL is the pinned
+[Slime-ready mirror](https://huggingface.co/datasets/zhuzilin/dapo-math-17k)
+of the
+[original DAPO-Math-17k](https://huggingface.co/datasets/BytedTsinghua-SIA/DAPO-Math-17k).
+Use the pinned mirror for exact reproduction rather than the currently
+duplicated 1.79M-row upstream parquet. The AIME24 file comes from the
+[Slime-ready AIME24 mirror](https://huggingface.co/datasets/zhuzilin/aime-2024).
+These external datasets remain subject to their own terms.
+
 ### CPU dry run
 
-The dry run resolves and prints the complete training command. It does not
-require checkpoints, datasets, GPUs, or Ray, and it does not start training.
+This resolves and prints the complete command without checking paths, querying
+GPUs, starting Ray, or training:
 
 ```bash
 bash examples/opsa/run_opsa.sh \
@@ -76,13 +127,12 @@ bash examples/opsa/run_opsa.sh \
 
 ### GPU training
 
-Before training, prepare a Hugging Face checkpoint, its converted Megatron
-actor checkpoint, training and evaluation JSON/JSONL files, and a Megatron-LM
-checkout. See the
+Prepare a Hugging Face checkpoint, its converted Megatron actor checkpoint, and
+a Megatron-LM checkout. See the
 [checkpoint conversion instructions](slime/examples/opsa/README.md#prepare-checkpoints).
 
-After replacing the paths below, this command starts the canonical Qwen3-1.7B
-OPSA run on a single machine with 8 GPUs:
+After replacing the model and output paths below, this command starts the
+canonical Qwen3-1.7B OPSA run on a single machine with 8 GPUs:
 
 ```bash
 bash examples/opsa/run_opsa.sh \
@@ -92,20 +142,25 @@ bash examples/opsa/run_opsa.sh \
   --hf-checkpoint /path/to/Qwen3-1.7B \
   --actor-checkpoint /path/to/qwen3-1.7b-megatron \
   --save-dir /path/to/outputs/opsa-qwen3-1.7b-lowest20 \
-  --prompt-data /path/to/train.jsonl \
-  --eval-data /path/to/eval.jsonl \
+  --prompt-data "${OPSA_DATA_DIR}/dapo-math-17k/dapo-math-17k.jsonl" \
+  --eval-data "${OPSA_DATA_DIR}/aime-2024/aime-2024.jsonl" \
   --megatron-path /path/to/Megatron-LM
 ```
 
 This preset uses 4 actor GPUs and 4 rollout GPUs, runs for 700 steps, and saves
 and evaluates every 20 steps. The launcher starts a local Ray cluster and stops
-only the cluster it started. For an existing Ray cluster or the other supported
-models, see the [launcher guide](slime/examples/opsa/README.md).
+only the cluster it started. See the
+[launcher guide](slime/examples/opsa/README.md) for existing Ray clusters and the
+other supported models.
+
+<a id="training-logs"></a>
 
 ## Training logs
 
 Reference training curves and metrics are available in the
 [public W&B workspace](https://wandb.ai/whywhyyy0731-purdue-university/opsa/workspace).
+
+<a id="license"></a>
 
 ## License
 
