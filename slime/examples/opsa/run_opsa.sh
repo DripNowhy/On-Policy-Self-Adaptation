@@ -9,6 +9,7 @@ MODEL="qwen3-1.7b"
 PRESET="opsa"
 TOKEN_FRACTION="0.2"
 NUM_ROLLOUT_OVERRIDE="${NUM_ROLLOUT_OVERRIDE:-}"
+SAVE_INTERVAL_OVERRIDE="${SAVE_INTERVAL_OVERRIDE:-}"
 HF_CHECKPOINT="${HF_CHECKPOINT:-}"
 ACTOR_CHECKPOINT="${ACTOR_CHECKPOINT:-${REF_LOAD:-}}"
 RESUME_FROM="${RESUME_FROM:-}"
@@ -27,6 +28,7 @@ WANDB_DIR="${WANDB_DIR:-}"
 WANDB_LOG_ALL_METRICS="${WANDB_LOG_ALL_METRICS:-false}"
 WANDB_OPEN_METRICS="${WANDB_OPEN_METRICS:-false}"
 LIGHT_CHECKPOINT=false
+COLOCATE=false
 DRY_RUN=false
 
 usage() {
@@ -35,10 +37,11 @@ Usage:
   bash examples/opsa/run_opsa.sh [options]
 
 Method:
-  --model NAME                qwen3-1.7b, qwen3-4b, or qwen3.5-9b
+  --model NAME                qwen3-1.7b, qwen3-4b, qwen3-14b, or qwen3.5-9b
   --preset NAME               opsa, fixed-negative, or fixed-positive
   --fraction FLOAT            Lowest-token fraction in (0, 1] (default: 0.2)
   --steps INTEGER             Override the model preset's training steps
+  --save-interval INTEGER     Override the model preset's checkpoint interval
 
 Paths:
   --hf-checkpoint PATH        Hugging Face checkpoint used by rollout
@@ -54,6 +57,7 @@ Runtime:
   --ray-port PORT             Local Ray GCS port (default: 6379)
   --dashboard-port PORT       Local Ray dashboard port (default: 8265)
   --light-checkpoint          Omit optimizer and RNG state (not resumable)
+  --colocate                  Share all physical GPUs between actor and rollout
   --dry-run                   Print the resolved command without checking paths
   -h, --help                  Show this help
 
@@ -118,6 +122,11 @@ while [ "$#" -gt 0 ]; do
       --steps)
          require_value "$@"
          NUM_ROLLOUT_OVERRIDE="$2"
+         shift 2
+         ;;
+      --save-interval)
+         require_value "$@"
+         SAVE_INTERVAL_OVERRIDE="$2"
          shift 2
          ;;
       --hf-checkpoint)
@@ -207,6 +216,10 @@ while [ "$#" -gt 0 ]; do
          LIGHT_CHECKPOINT=true
          shift
          ;;
+      --colocate)
+         COLOCATE=true
+         shift
+         ;;
       --dry-run)
          DRY_RUN=true
          shift
@@ -222,7 +235,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 case "$MODEL" in
-   qwen3-1.7b|qwen3-4b|qwen3.5-9b) ;;
+   qwen3-1.7b|qwen3-4b|qwen3-14b|qwen3.5-9b) ;;
    *) die "unsupported model '$MODEL'" ;;
 esac
 
@@ -239,6 +252,9 @@ if ! awk -v fraction="$TOKEN_FRACTION" 'BEGIN { exit !(fraction > 0 && fraction 
 fi
 if [ -n "$NUM_ROLLOUT_OVERRIDE" ] && ! [[ "$NUM_ROLLOUT_OVERRIDE" =~ ^[1-9][0-9]*$ ]]; then
    die "--steps/NUM_ROLLOUT_OVERRIDE must be a positive integer"
+fi
+if [ -n "$SAVE_INTERVAL_OVERRIDE" ] && ! [[ "$SAVE_INTERVAL_OVERRIDE" =~ ^[1-9][0-9]*$ ]]; then
+   die "--save-interval/SAVE_INTERVAL_OVERRIDE must be a positive integer"
 fi
 
 validate_port() {
@@ -283,14 +299,32 @@ source "$MODEL_CONFIG"
 if [ -n "$NUM_ROLLOUT_OVERRIDE" ]; then
    NUM_ROLLOUT="$NUM_ROLLOUT_OVERRIDE"
 fi
+SAVE_INTERVAL="${SAVE_INTERVAL:-20}"
+if [ -n "$SAVE_INTERVAL_OVERRIDE" ]; then
+   SAVE_INTERVAL="$SAVE_INTERVAL_OVERRIDE"
+fi
+if ! [[ "$SAVE_INTERVAL" =~ ^[1-9][0-9]*$ ]]; then
+   die "resolved checkpoint interval must be a positive integer"
+fi
 
-TOTAL_GPUS=$((ACTOR_GPUS + ROLLOUT_GPUS))
+SEPARATE_ACTOR_GPUS="$ACTOR_GPUS"
+SEPARATE_ROLLOUT_GPUS="$ROLLOUT_GPUS"
+TOTAL_GPUS=$((SEPARATE_ACTOR_GPUS + SEPARATE_ROLLOUT_GPUS))
+if [ "$COLOCATE" = true ]; then
+   ACTOR_GPUS="$TOTAL_GPUS"
+   EFFECTIVE_ROLLOUT_GPUS="$TOTAL_GPUS"
+   SGLANG_MEM_FRACTION_STATIC="${SGLANG_COLOCATE_MEM_FRACTION_STATIC:-0.70}"
+else
+   EFFECTIVE_ROLLOUT_GPUS="$ROLLOUT_GPUS"
+fi
 if [ $((ACTOR_GPUS % TENSOR_MODEL_PARALLEL_SIZE)) -ne 0 ]; then
    die "actor GPUs must be divisible by tensor model parallel size"
 fi
-if [ $((ROLLOUT_GPUS % ROLLOUT_GPUS_PER_ENGINE)) -ne 0 ]; then
+if [ $((EFFECTIVE_ROLLOUT_GPUS % ROLLOUT_GPUS_PER_ENGINE)) -ne 0 ]; then
    die "rollout GPUs must be divisible by rollout GPUs per engine"
 fi
+TRAINING_DATA_PARALLEL_SIZE=$((ACTOR_GPUS / TENSOR_MODEL_PARALLEL_SIZE))
+ROLLOUT_ENGINE_COUNT=$((EFFECTIVE_ROLLOUT_GPUS / ROLLOUT_GPUS_PER_ENGINE))
 
 if [ "$DRY_RUN" = true ]; then
    HF_CHECKPOINT="${HF_CHECKPOINT:-<HF_CHECKPOINT>}"
@@ -374,7 +408,7 @@ CKPT_ARGS=(
    --hf-checkpoint "$HF_CHECKPOINT"
    --ref-load "$ACTOR_CHECKPOINT"
    --save "$SAVE_DIR"
-   --save-interval 20
+   --save-interval "$SAVE_INTERVAL"
 )
 if [ -n "$RESUME_FROM" ]; then
    CKPT_ARGS+=(--load "$RESUME_FROM")
@@ -455,12 +489,19 @@ SGLANG_ARGS=(
    --rollout-num-gpus-per-engine "$ROLLOUT_GPUS_PER_ENGINE"
    --sglang-mem-fraction-static "$SGLANG_MEM_FRACTION_STATIC"
 )
+if declare -p SGLANG_CUDA_GRAPH_BS >/dev/null 2>&1; then
+   SGLANG_ARGS+=(--sglang-cuda-graph-bs "${SGLANG_CUDA_GRAPH_BS[@]}")
+fi
 
 WANDB_ARGS=()
 if [ -n "$WANDB_PROJECT" ]; then
    fraction_percentage="$(awk -v value="$TOKEN_FRACTION" 'BEGIN { printf "%g", value * 100 }')"
    fraction_percentage="${fraction_percentage//./p}"
-   WANDB_GROUP="${WANDB_GROUP:-opsa-${MODEL}-${PRESET}-lowest${fraction_percentage}}"
+   layout_suffix=""
+   if [ "$COLOCATE" = true ]; then
+      layout_suffix="-colocate"
+   fi
+   WANDB_GROUP="${WANDB_GROUP:-opsa-${MODEL}-${PRESET}-lowest${fraction_percentage}${layout_suffix}}"
    WANDB_ARGS=(
       --use-wandb
       --wandb-project "$WANDB_PROJECT"
@@ -496,7 +537,13 @@ TRAIN_COMMAND=(
    python3 train.py
    --actor-num-nodes 1
    --actor-num-gpus-per-node "$ACTOR_GPUS"
-   --rollout-num-gpus "$ROLLOUT_GPUS"
+)
+if [ "$COLOCATE" = true ]; then
+   TRAIN_COMMAND+=(--colocate)
+else
+   TRAIN_COMMAND+=(--rollout-num-gpus "$ROLLOUT_GPUS")
+fi
+TRAIN_COMMAND+=(
    "${MODEL_ARGS[@]}"
    "${CKPT_ARGS[@]}"
    "${ROLLOUT_ARGS[@]}"
@@ -520,15 +567,23 @@ fi
 RUNTIME_PYTHONPATH="${MEGATRON_PATH}${PYTHONPATH:+:${PYTHONPATH}}"
 export RUNTIME_PYTHONPATH HAS_NVLINK
 RUNTIME_ENV_JSON="$(
-   python3 -c 'import json, os; print(json.dumps({"env_vars": {"PYTHONPATH": os.environ["RUNTIME_PYTHONPATH"], "CUDA_DEVICE_MAX_CONNECTIONS": "1", "NCCL_NVLS_ENABLE": os.environ["HAS_NVLINK"], "SGLANG_DISABLE_CUDNN_CHECK": "1"}}))'
+   python3 -c 'import json, os; env = {"PYTHONPATH": os.environ["RUNTIME_PYTHONPATH"], "CUDA_DEVICE_MAX_CONNECTIONS": "1", "NCCL_NVLS_ENABLE": os.environ["HAS_NVLINK"], "SGLANG_DISABLE_CUDNN_CHECK": "1"}; optional = "FLASHINFER_WORKSPACE_BASE"; env.update({optional: os.environ[optional]}) if os.environ.get(optional) else None; print(json.dumps({"env_vars": env}))'
 )"
 
 echo "Model:               $MODEL_DISPLAY_NAME"
 echo "Preset:              $PRESET"
 echo "Lowest fraction:     $TOKEN_FRACTION"
-echo "Actor/Rollout GPUs:  ${ACTOR_GPUS}/${ROLLOUT_GPUS}"
+if [ "$COLOCATE" = true ]; then
+   echo "GPU layout:           colocated (${TOTAL_GPUS} physical; ${ACTOR_GPUS} actor / ${EFFECTIVE_ROLLOUT_GPUS} rollout shared)"
+else
+   echo "GPU layout:           separate (${ACTOR_GPUS} actor + ${ROLLOUT_GPUS} rollout)"
+fi
 echo "Training TP:         $TENSOR_MODEL_PARALLEL_SIZE"
+echo "Training DP:         $TRAINING_DATA_PARALLEL_SIZE"
+echo "Rollout TP:          $ROLLOUT_GPUS_PER_ENGINE"
+echo "Rollout engines:     $ROLLOUT_ENGINE_COUNT"
 echo "Training steps:      $NUM_ROLLOUT"
+echo "Save interval:       $SAVE_INTERVAL"
 echo "Rollout/Eval length: ${ROLLOUT_MAX_RESPONSE_LEN}/${EVAL_MAX_RESPONSE_LEN}"
 echo "Checkpoint mode:     $([ "$LIGHT_CHECKPOINT" = true ] && echo light || echo resumable)"
 if [ -n "$WANDB_PROJECT" ]; then
