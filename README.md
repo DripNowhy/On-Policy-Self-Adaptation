@@ -43,17 +43,17 @@ tokens are excluded from the policy loss.
 
 ## Results
 
-Each benchmark cell reports **Avg@32 / Pass@32** in percent. All values are
-from the OPSA manuscript.
+The three math columns report **Avg@32 / Pass@32**; the two O.O.D. columns
+report **Avg@32** only. All values are from the OPSA manuscript.
 
-| Model | Variant | AIME24 | AIME25 | HMMT25 | MBPP+ |
-|---|---|---:|---:|---:|---:|
-| Qwen3-1.7B | Base | 13.44 / 40.00 | 9.69 / 30.00 | 5.73 / 23.33 | 58.24 / 70.10 |
-| Qwen3-1.7B | **+ OPSA** | **48.85 / 80.00** | **35.31 / 66.67** | **23.33 / 50.00** | **59.44 / 73.02** |
-| Qwen3-4B | Base | 23.33 / 56.67 | 20.52 / 56.67 | 13.13 / 33.33 | 66.93 / 74.34 |
-| Qwen3-4B | **+ OPSA** | **62.08 / 83.33** | **58.44 / 83.33** | **37.40 / 60.00** | **68.35 / 75.67** |
-| Qwen3.5-9B | Base | 76.35 / 93.33 | 56.04 / 93.33 | 44.48 / 86.67 | 77.33 / 91.27 |
-| Qwen3.5-9B | **+ OPSA** | **87.81 / 96.67** | **76.98 / 96.67** | **67.40 / 93.33** | **79.27 / 92.53** |
+| Model | Variant | AIME24 | AIME25 | HMMT25 | MBPP+ Avg@32 | GPQA_D Avg@32 |
+|---|---|---:|---:|---:|---:|---:|
+| Qwen3-1.7B | Base | 13.44 / 40.00 | 9.69 / 30.00 | 5.73 / 23.33 | 58.24 | 27.92 |
+| Qwen3-1.7B | **+ OPSA** | **48.85 / 80.00** | **35.31 / 66.67** | **23.33 / 50.00** | **59.44** | **32.40** |
+| Qwen3-4B | Base | 23.33 / 56.67 | 20.52 / 56.67 | 13.13 / 33.33 | 66.93 | 38.46 |
+| Qwen3-4B | **+ OPSA** | **62.08 / 83.33** | **58.44 / 83.33** | **37.40 / 60.00** | **68.35** | **41.29** |
+| Qwen3.5-9B | Base | 76.35 / 93.33 | 56.04 / 93.33 | 44.48 / 86.67 | 77.33 | 70.53 |
+| Qwen3.5-9B | **+ OPSA** | **87.81 / 96.67** | **76.98 / 96.67** | **67.40 / 93.33** | **79.27** | **73.70** |
 
 The models are trained and evaluated in non-thinking mode. Training uses only
 the questions from DAPO-17k. Evaluation samples 32 responses per prompt with

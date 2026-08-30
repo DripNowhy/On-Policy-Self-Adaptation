@@ -6,7 +6,6 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 MODEL="qwen3-1.7b"
 FRACTIONS="0.1,0.2,0.3,0.4"
-SAVE_INTERVAL_OVERRIDE="${SAVE_INTERVAL_OVERRIDE:-}"
 HF_CHECKPOINT="${HF_CHECKPOINT:-}"
 ACTOR_CHECKPOINT="${ACTOR_CHECKPOINT:-${REF_LOAD:-}}"
 SAVE_ROOT="${SAVE_ROOT:-}"
@@ -24,7 +23,6 @@ WANDB_DIR="${WANDB_DIR:-}"
 WANDB_LOG_ALL_METRICS="${WANDB_LOG_ALL_METRICS:-false}"
 WANDB_OPEN_METRICS="${WANDB_OPEN_METRICS:-false}"
 LIGHT_CHECKPOINT=false
-COLOCATE=false
 DRY_RUN=false
 
 usage() {
@@ -35,9 +33,8 @@ Usage:
 Runs OPSA sequentially for lowest 10%, 20%, 30%, and 40% by default.
 
 Options:
-  --model NAME                qwen3-1.7b, qwen3-4b, qwen3-14b, or qwen3.5-9b
+  --model NAME                qwen3-1.7b, qwen3-4b, or qwen3.5-9b
   --fractions LIST            Comma-separated fractions (default: 0.1,0.2,0.3,0.4)
-  --save-interval INTEGER     Override each run's checkpoint interval
   --hf-checkpoint PATH        Hugging Face checkpoint used by rollout
   --actor-checkpoint PATH     Megatron checkpoint used to initialize the actor
   --save-root PATH            Parent directory for fraction-specific runs
@@ -55,7 +52,6 @@ Options:
   --wandb-log-all-metrics     Log all Slime metrics instead of the compact set
   --wandb-open-metrics        Add SGLang OpenMetrics to online W&B runs
   --light-checkpoint          Produce non-resumable weight-only checkpoints
-  --colocate                  Share all physical GPUs between actor and rollout
   --dry-run                   Print all resolved commands without running them
   -h, --help                  Show this help
 EOF
@@ -95,11 +91,6 @@ while [ "$#" -gt 0 ]; do
       --fractions)
          require_value "$@"
          FRACTIONS="$2"
-         shift 2
-         ;;
-      --save-interval)
-         require_value "$@"
-         SAVE_INTERVAL_OVERRIDE="$2"
          shift 2
          ;;
       --hf-checkpoint)
@@ -184,10 +175,6 @@ while [ "$#" -gt 0 ]; do
          LIGHT_CHECKPOINT=true
          shift
          ;;
-      --colocate)
-         COLOCATE=true
-         shift
-         ;;
       --dry-run)
          DRY_RUN=true
          shift
@@ -203,15 +190,12 @@ while [ "$#" -gt 0 ]; do
 done
 
 case "$MODEL" in
-   qwen3-1.7b|qwen3-4b|qwen3-14b|qwen3.5-9b) ;;
+   qwen3-1.7b|qwen3-4b|qwen3.5-9b) ;;
    *) die "unsupported model '$MODEL'" ;;
 esac
 
 if [ -z "$FRACTIONS" ]; then
    die "--fractions must contain at least one value"
-fi
-if [ -n "$SAVE_INTERVAL_OVERRIDE" ] && ! [[ "$SAVE_INTERVAL_OVERRIDE" =~ ^[1-9][0-9]*$ ]]; then
-   die "--save-interval/SAVE_INTERVAL_OVERRIDE must be a positive integer"
 fi
 if [ "$DRY_RUN" = false ] && [ -z "$SAVE_ROOT" ]; then
    die "--save-root is required"
@@ -283,14 +267,8 @@ for fraction in "${FRACTION_VALUES[@]}"; do
          RUN_ARGS+=(--wandb-open-metrics)
       fi
    fi
-   if [ -n "$SAVE_INTERVAL_OVERRIDE" ]; then
-      RUN_ARGS+=(--save-interval "$SAVE_INTERVAL_OVERRIDE")
-   fi
    if [ "$LIGHT_CHECKPOINT" = true ]; then
       RUN_ARGS+=(--light-checkpoint)
-   fi
-   if [ "$COLOCATE" = true ]; then
-      RUN_ARGS+=(--colocate)
    fi
    if [ "$DRY_RUN" = true ]; then
       RUN_ARGS+=(--dry-run)

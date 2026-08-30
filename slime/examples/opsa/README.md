@@ -39,15 +39,11 @@ no reference-model forward pass or KL loss is used.
 |---|---:|---:|---:|---:|---:|
 | `qwen3-1.7b` | 700 | 4 / 4 | 1 | 12,000 / 32,768 | 16,384 |
 | `qwen3-4b` (Base) | 1,000 | 4 / 4 | 2 | 12,000 / 32,768 | 24,576 |
-| `qwen3-14b` | 1,000 | 4 / 4 | 4 | 12,000 / 32,768 | 16,384 |
 | `qwen3.5-9b` | 1,000 | 2 / 6 | 2 | 16,384 / 32,768 | 32,768 |
 
 All presets use non-thinking rollout, batch size 64, learning rate `1e-6`, and
-evaluation interval 20. The default checkpoint interval is 20, except for
-Qwen3-14B, where it is 200 because resumable checkpoints are much larger.
-Qwen3-14B uses rollout TP 2 and enables optimizer CPU offload; Qwen3.5-9B also
-enables optimizer CPU offload. Install the latter's optional linear-attention
-dependency with:
+save/evaluation interval 20. Qwen3.5-9B additionally enables optimizer CPU
+offload. Install its optional linear-attention dependency with:
 
 ```bash
 pip install -e '.[qwen35]'
@@ -61,7 +57,7 @@ project directory, select the model definition and convert it:
 
 ```bash
 export PYTHONPATH="${MEGATRON_PATH}${PYTHONPATH:+:${PYTHONPATH}}"
-source scripts/models/qwen3-1.7B.sh  # or qwen3-4B.sh / qwen3-14B.sh / qwen3.5-9B.sh
+source scripts/models/qwen3-1.7B.sh  # or qwen3-4B.sh / qwen3.5-9B.sh
 
 torchrun --nproc-per-node 1 tools/convert_hf_to_torch_dist.py \
   "${MODEL_ARGS[@]}" \
@@ -99,40 +95,6 @@ bash examples/opsa/run_opsa.sh \
   --eval-data "${EVAL_DATA}" \
   --megatron-path "${MEGATRON_PATH}"
 ```
-
-### Qwen3-14B on 8 GPUs
-
-The default `qwen3-14b` layout is the conservative starting point on 8 H100
-80GB GPUs: 4 actor GPUs with training TP 4, plus 4 rollout GPUs forming two TP 2
-engines. It keeps the actor at DP 1 and avoids moving both models between host
-and device memory every step.
-
-```bash
-bash examples/opsa/run_opsa.sh \
-  --model qwen3-14b \
-  --preset opsa \
-  --fraction 0.2 \
-  --save-interval 200 \
-  --hf-checkpoint "${HF_CHECKPOINT}" \
-  --actor-checkpoint "${ACTOR_CHECKPOINT}" \
-  --save-dir "${OUTPUT_ROOT}/qwen3-14b/opsa-lowest20" \
-  --prompt-data "${TRAIN_DATA}" \
-  --eval-data "${EVAL_DATA}" \
-  --megatron-path "${MEGATRON_PATH}"
-```
-
-Add `--colocate` to let actor and rollout share all 8 physical GPUs. The actor
-then uses TP 4 / DP 2, while rollout uses four TP 2 engines. Colocation forces
-actor and rollout offload/onload every step. Both layouts completed an 8xH100
-80GB one-step smoke, but stochastic response lengths make that timing comparison
-inconclusive. Colocation also changes OPSA's DP-local token-selection pools by
-changing actor DP from 1 to 2, so it is not purely a performance switch. Use the
-default 4+4 layout for method reproduction; benchmark several steady-state
-steps before choosing colocation for a new experiment.
-
-Qwen3-14B resumable checkpoints are large (roughly 190GB each in this setup).
-Evaluation remains every 20 steps; use a larger explicit `--save-interval`, or
-use `--light-checkpoint` only for short, non-resumable smoke tests.
 
 Choose `--preset fixed-negative` or `--preset fixed-positive` for the two fixed
 advantage ablations. The launcher starts a local Ray cluster when
@@ -233,6 +195,6 @@ every generated command without starting Ray or training.
 
 This open-source configuration is CPU/CLI validated: selector and argument
 behavior is covered by CPU tests, and every model/method launcher is exercised
-with `--dry-run`. Qwen3-14B additionally completed one-step GPU smoke tests in
-both separate and colocated layouts. No long Qwen3-14B run, and none of the
-other three model presets, were re-run end to end as part of this validation.
+with `--dry-run`. The three model presets have not been re-run end to end on GPUs
+as part of this cleanup, so the validation status must not be interpreted as a
+new reproduction of their training results.
