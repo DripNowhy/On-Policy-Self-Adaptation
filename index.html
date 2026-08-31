@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="A visual research story about why on-policy distillation can improve a student even when the teacher signal is noisy—and how token uncertainty enables teacher-free self-improvement."
+    />
+    <meta name="theme-color" content="#f8f6f0" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Does On-Policy Distillation Really Distill?" />
+    <meta property="og:description" content="From noisy teacher to self-improvement." />
+    <meta property="og:image" content="assets/opsa-overview.webp" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <title>Does On-Policy Distillation Really Distill? · OPSA</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="assets/dm-sans.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="assets/newsreader.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="styles.css" />
+    <script>
+      try {
+        const savedTheme = localStorage.getItem("opsa-theme");
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.dataset.theme = savedTheme || (prefersDark ? "dark" : "light");
+      } catch (_) {}
+    </script>
+    <script src="script.js" defer></script>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main-content">Skip to the article</a>
+    <div class="reading-progress" aria-hidden="true"><span></span></div>
+
+    <header class="site-header">
+      <nav class="site-nav" aria-label="Primary navigation">
+        <a class="wordmark" href="#top" aria-label="OPSA, back to top">
+          <span class="wordmark-mark" aria-hidden="true">O</span>
+          <span>OPSA</span>
+        </a>
+        <div class="nav-center" aria-label="Page links">
+          <a href="#puzzle">The puzzle</a>
+          <a href="#method">Method</a>
+          <a href="#evidence">Evidence</a>
+        </div>
+        <div class="nav-actions">
+          <a class="nav-external" href="https://huggingface.co/collections/Tuwhy/on-policy-self-adaptation" target="_blank" rel="noreferrer">
+            Models
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 11.5 11.5 4.5M6 4.5h5.5V10" /></svg>
+          </a>
+          <button class="theme-toggle" type="button" aria-label="Switch color theme">
+            <svg class="sun-icon" viewBox="0 0 20 20" aria-hidden="true">
+              <circle cx="10" cy="10" r="3.1" /><path d="M10 1.5v2M10 16.5v2M1.5 10h2M16.5 10h2M4 4l1.4 1.4M14.6 14.6 16 16M16 4l-1.4 1.4M5.4 14.6 4 16" />
+            </svg>
+            <svg class="moon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M16.8 12.4A7.1 7.1 0 0 1 7.6 3.2a7.2 7.2 0 1 0 9.2 9.2Z" /></svg>
+          </button>
+        </div>
+      </nav>
+    </header>
+
+    <main id="main-content">
+      <section class="hero" id="top">
+        <div class="hero-copy reveal">
+          <p class="eyebrow"><span></span> On-policy self-adaptation</p>
+          <h1>Does on-policy distillation <em>really distill?</em></h1>
+          <p class="hero-story-title">From noisy teacher to self-improvement</p>
+          <p class="hero-dek">Noisy teacher signals led us to a simpler possibility: a model can improve by listening to the uncertainty inside its own token distribution.</p>
+          <div class="byline">
+            <span>Yi Ding</span><span class="byline-separator" aria-hidden="true">×</span><span>Ruqi Zhang</span>
+          </div>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#puzzle">
+              Read the story
+              <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M9 3v11M4.5 9.5 9 14l4.5-4.5" /></svg>
+            </a>
+            <a class="button button-secondary" href="https://huggingface.co/collections/Tuwhy/on-policy-self-adaptation" target="_blank" rel="noreferrer">
+              Models &amp; checkpoints
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 11.5 11.5 4.5M6 4.5h5.5V10" /></svg>
+            </a>
+          </div>
+        </div>
+
+        <div class="hero-lab reveal" aria-label="A token-aligned visualization of the rollout: The answer seems right, but let's verify it.">
+          <div class="lab-header"><span>One rollout</span><span class="live-dot"><i></i> token view</span></div>
+          <div class="token-signal-matrix" aria-hidden="true">
+            <div class="token-strip">
+              <span class="token-row-label">sampled token</span>
+              <div class="token-track">
+                <span class="token token-calm">The</span><span class="token token-calm">answer</span><span class="token token-fork">seems</span><span class="token token-tail">right,</span><span class="token token-fork token-focus">but</span><span class="token token-calm">let’s</span><span class="token token-fork">verify</span><span class="token token-calm">it.</span>
+              </div>
+            </div>
+            <div class="signal-grid">
+              <span class="signal-label">student log p</span>
+              <div class="signal-track logp-track"><i style="--value:84%"></i><i style="--value:78%"></i><i style="--value:56%"></i><i class="low" style="--value:17%"></i><i class="low focus" style="--value:22%"></i><i style="--value:71%"></i><i style="--value:45%"></i><i style="--value:80%"></i></div>
+              <span class="signal-label">entropy</span>
+              <div class="signal-track entropy-track"><i style="--value:22%"></i><i style="--value:28%"></i><i style="--value:68%"></i><i style="--value:38%"></i><i class="focus" style="--value:91%"></i><i style="--value:18%"></i><i style="--value:76%"></i><i style="--value:25%"></i></div>
+              <span class="signal-label accent-label">OPSA signal</span>
+              <div class="signal-track opsa-track"><i></i><i></i><i></i><i class="selected" style="--value:42%"></i><i class="selected focus" style="--value:92%"></i><i></i><i></i><i></i></div>
+            </div>
+          </div>
+          <div class="lab-annotation">
+            <svg viewBox="0 0 32 20" aria-hidden="true"><path d="M2 4c9 0 7 12 18 12h9M25 12l4 4-4 4" /></svg>
+            <p><strong>Low probability, high uncertainty.</strong> Suppress this token more strongly.</p>
+          </div>
+          <div class="lab-footer"><span><i class="legend-dot student"></i> student state</span><span><i class="legend-dot update"></i> self-adapted update</span></div>
+        </div>
+      </section>
+
+      <section class="hero-metrics reveal" aria-label="Headline results">
+        <div class="metric"><span class="metric-value">0</span><span class="metric-label">teachers, rewards, or hints</span></div>
+        <div class="metric"><span class="metric-value">20%</span><span class="metric-label">lowest-logp tokens updated</span></div>
+        <div class="metric"><span class="metric-value">+35.41</span><span class="metric-label">AIME24 Avg@32 points</span></div>
+      </section>
+
+      <figure class="overview-figure page-wide reveal">
+        <button class="zoom-trigger" type="button" data-zoom="assets/opsa-overview.webp" data-caption="From externally supervised on-policy learning to self-adaptation, together with OPSA training dynamics and benchmark results.">
+          <img src="assets/opsa-overview.webp" alt="Comparison of RLVR, on-policy distillation, self-distillation, and OPSA, followed by OPSA training curves and benchmark gains." width="2932" height="1126" fetchpriority="high" />
+          <span class="zoom-hint" aria-hidden="true"><svg viewBox="0 0 18 18"><circle cx="8" cy="8" r="4.5" /><path d="m11.5 11.5 4 4M8 6v4M6 8h4" /></svg>Expand</span>
+        </button>
+        <figcaption><span>Figure 1</span> OPSA replaces external supervision with an entropy-adaptive signal computed entirely from the policy itself.</figcaption>
+      </figure>
+
+      <section class="summary-band page-wide reveal" aria-labelledby="summary-title">
+        <div class="summary-kicker"><span>In one minute</span><h2 id="summary-title">The whole story</h2></div>
+        <ol class="summary-list">
+          <li><span>01</span><p><strong>The teacher is not a clean oracle.</strong> At verifiable final-answer tokens, its signal often points against answer correctness on student-generated trajectories.</p></li>
+          <li><span>02</span><p><strong>Most useful updates live in the tail.</strong> Low-logp sampled tokens—not the confident majority—drive the observed gains.</p></li>
+          <li><span>03</span><p><strong>Uncertainty is enough to adapt.</strong> Negative signals scaled by token entropy outperform teacher-based distillation without external supervision.</p></li>
+        </ol>
+      </section>
+
+      <div class="article-shell">
+        <aside class="toc" aria-label="On this page">
+          <p>On this page</p>
+          <ol>
+            <li><a href="#puzzle"><span>01</span> The puzzle</a></li>
+            <li><a href="#drivers"><span>02</span> What drives learning</a></li>
+            <li><a href="#method"><span>03</span> The recipe</a></li>
+            <li><a href="#mechanism"><span>04</span> How it works</a></li>
+            <li><a href="#evidence"><span>05</span> Evidence</a></li>
+          </ol>
+          <div class="toc-progress" aria-hidden="true"><span></span></div>
+        </aside>
+
+        <article class="article-body">
+          <section class="article-section reveal" id="puzzle" data-section="puzzle">
+            <div class="section-heading"><span class="section-number">01</span><div><p class="section-kicker">The puzzle</p><h2>A teacher judging someone else’s thoughts</h2></div></div>
+            <p class="lead">On-policy distillation has an appealing story: let the student generate a response, ask a stronger teacher to score every token, and use that dense feedback to move the student toward the teacher.</p>
+            <p>The subtlety is in the prefix. Each teacher score is conditioned on a trajectory sampled by the <em>student</em>—a sequence the teacher may never have produced. The farther the two policies drift apart, the more the teacher is asked to judge unfamiliar states. A larger teacher is not automatically a more reliable teacher in those states.</p>
+            <div class="definition-card"><span class="definition-label">What we call a noisy signal</span><p>At verifiable final-answer tokens, the sign of the teacher’s advantage disagrees with the outcome: a correct answer receives a negative signal, or an incorrect answer receives a positive one.</p></div>
+            <figure class="figure-wide">
+              <button class="zoom-trigger" type="button" data-zoom="assets/teacher-noise.webp" data-caption="Teacher-signal direction mismatch and training dynamics under filtered supervision.">
+                <img src="assets/teacher-noise.webp" alt="Bar chart showing noisy trajectory rates for three teacher sizes and a line chart showing similar AIME24 training performance with all, noisy-only, and clean-only supervision." width="1599" height="420" loading="lazy" />
+                <span class="zoom-hint" aria-hidden="true"><svg viewBox="0 0 18 18"><circle cx="8" cy="8" r="4.5" /><path d="m11.5 11.5 4 4M8 6v4M6 8h4" /></svg>Expand</span>
+              </button>
+              <figcaption><span>Figure 2</span> Signal mismatch grows strikingly with teacher scale, yet filtering the trajectories barely changes the student’s improvement.</figcaption>
+            </figure>
+            <p>With a 4B teacher, 20.4% of correct trajectories receive a negative answer-token signal, while 40.8% of incorrect trajectories receive a positive one. With the largest teacher, the signal becomes almost uniformly negative: 97.8% of correct and 96.6% of incorrect answer tokens are pushed down.</p>
+            <p>Then comes the result that changed the direction of the project. We trained on all trajectories, only those containing noisy signals, and only those without them. The three runs reached comparable performance after a similar number of updates.</p>
+            <blockquote class="pull-quote"><p>If the student improves even on the misleading subset, what exactly is being distilled?</p></blockquote>
+          </section>
+
+          <section class="article-section reveal" id="drivers" data-section="drivers">
+            <div class="section-heading"><span class="section-number">02</span><div><p class="section-kicker">What drives learning</p><h2>Follow the gradient, not the story</h2></div></div>
+            <p class="lead">We stripped the objective down along two axes: which sampled tokens actually move the policy, and which signs of the learning signal create the improvement?</p>
+            <div class="finding-grid">
+              <article class="finding-card"><span class="finding-index">Finding A</span><h3>Confident tokens are mostly spectators</h3><p>When the student already assigns a token high probability, its policy gradient is tiny. Teacher and student also tend to agree there, making the advantage nearly zero.</p><strong>51.7% <small>of tokens have |advantage| &lt; 10<sup>−4</sup></small></strong></article>
+              <article class="finding-card finding-card-accent"><span class="finding-index">Finding B</span><h3>The negative sign does the work</h3><p>On the lowest-logp tokens, replacing teacher advantages with the same fixed negative value preserves the improvement. A fixed positive value collapses the policy.</p><strong>−0.5 <small>works without a teacher</small></strong></article>
+            </div>
+            <figure class="figure-wide">
+              <button class="zoom-trigger" type="button" data-zoom="assets/where-learning-happens.webp" data-caption="Advantage mass, near-zero advantages among high-logp tokens, and controlled top-logp training runs.">
+                <img src="assets/where-learning-happens.webp" alt="Three plots showing advantages concentrated near zero, near-zero signals concentrated among high-logp tokens, and little learning from top-logp tokens." width="1663" height="405" loading="lazy" />
+                <span class="zoom-hint" aria-hidden="true"><svg viewBox="0 0 18 18"><circle cx="8" cy="8" r="4.5" /><path d="m11.5 11.5 4 4M8 6v4M6 8h4" /></svg>Expand</span>
+              </button>
+              <figcaption><span>Figure 3</span> High-logp tokens dominate the rollout but carry little effective learning signal. Restricting training to them produces almost no gain—even with the original advantage.</figcaption>
+            </figure>
+            <p>The result is easiest to see at the logit level. For a sampled token with probability <i>p</i>, the update is proportional to <i>A</i>(1 − <i>p</i>). It vanishes when the advantage <i>A</i> is near zero or when the policy is already confident. High-logp tokens often satisfy both conditions.</p>
+            <div class="equation-block compact-equation" aria-label="Sampled token update is proportional to advantage times one minus token probability">
+              <span class="equation-label">Sampled-token update</span><p>Δz<sub>t</sub> ∝ A<sub>t</sub> · (1 − π<sub>θ</sub>(y<sub>t</sub> ∣ y<sub>&lt;t</sub>))</p><span class="equation-note">low A → little update &nbsp;·&nbsp; high probability → little update</span>
+            </div>
+            <figure class="figure-wide">
+              <button class="zoom-trigger" type="button" data-zoom="assets/fixed-advantage.webp" data-caption="Holding token selection fixed, a negative scalar advantage recovers OPD-like accuracy while a positive scalar causes policy collapse.">
+                <img src="assets/fixed-advantage.webp" alt="Three plots showing that a fixed negative advantage on low-logp tokens reproduces OPD-like AIME24 improvement, while a fixed positive advantage collapses accuracy and destabilizes training." width="2176" height="503" loading="lazy" />
+                <span class="zoom-hint" aria-hidden="true"><svg viewBox="0 0 18 18"><circle cx="8" cy="8" r="4.5" /><path d="m11.5 11.5 4 4M8 6v4M6 8h4" /></svg>Expand</span>
+              </button>
+              <figcaption><span>Figure 4</span> On the same lowest-logp 20%, a fixed negative advantage reproduces OPD-like improvement; flipping it positive causes policy collapse.</figcaption>
+            </figure>
+            <p class="control-explainer">This control removes the information that distillation is supposed to transfer. We keep the selected token positions fixed—the lowest-logp 20%—but replace every teacher-derived advantage with one scalar. With <strong>A = −0.5</strong>, AIME24 performance steadily rises into the same band as standard OPD, while response length grows toward 12K tokens and then stabilizes. No teacher ranking among tokens is needed.</p>
+            <div class="sign-comparison" aria-label="Comparison of fixed negative and fixed positive advantages">
+              <article class="negative-control"><span>Fixed negative · A = −0.5</span><h3>OPD-like gains remain</h3><p>The selected unlikely tokens are consistently suppressed. Accuracy recovers and the full run remains stable even though teacher logits have been removed.</p></article>
+              <article class="positive-control"><span>Fixed positive · A = +0.2</span><h3>The policy collapses</h3><p>Selection is unchanged; only the direction flips. Within roughly 40 steps, response length falls near zero and the gradient norm spikes. Later outputs degenerate into random or garbled text.</p></article>
+            </div>
+            <p class="control-conclusion">The sign ablation isolates the mechanism: what matters is the <em>negative direction</em> on low-probability sampled tokens, not a detailed preference pattern inherited from the teacher.</p>
+            <div class="thesis-card"><span class="thesis-icon" aria-hidden="true">→</span><div><p class="thesis-label">Working hypothesis</p><p>Much of OPD’s gain comes from suppressing unlikely tokens sampled by the student—not from transferring a teacher’s preferred behavior.</p></div></div>
+          </section>
+
+          <section class="article-section reveal" id="method" data-section="method">
+            <div class="section-heading"><span class="section-number">03</span><div><p class="section-kicker">The recipe</p><h2>Turn uncertainty into supervision</h2></div></div>
+            <p class="lead">A fixed negative signal reveals that the teacher is unnecessary, but it treats every selected token the same. The student already contains a finer signal: its entropy at each position.</p>
+            <p>Low log probability alone is ambiguous. The model may be uncertain among several good next tokens, or it may be highly confident while a rare tail token happens to be sampled. Entropy separates these cases. We found that stronger negative updates at <em>higher-entropy</em> positions are both more effective and more stable.</p>
+            <div class="method-steps" aria-label="Three steps of OPSA">
+              <article><span>1</span><h3>Roll out</h3><p>Sample a response from the current policy and retain token log probabilities and entropies.</p></article>
+              <article><span>2</span><h3>Select</h3><p>Within each response, keep only the 20% of sampled tokens with the lowest log probability.</p></article>
+              <article><span>3</span><h3>Self-adapt</h3><p>Give those tokens negative advantages, increasing the magnitude with normalized entropy.</p></article>
+            </div>
+            <div class="equation-block main-equation">
+              <div class="equation-topline"><span class="equation-label">Entropy-adaptive advantage</span><span>for i in the lowest-logp 20%</span></div>
+              <p class="equation-formula" role="math" aria-label="Dynamic advantage A sub i equals negative one half minus H sub i minus H minimum, divided by two times H maximum minus H minimum."><span class="equation-symbol">A<sub>i</sub><sup>dyn</sup></span><span>=</span><span>−</span><span class="fraction"><span>1</span><span>2</span></span><span>−</span><span class="fraction wide-fraction"><span>H<sub>i</sub> − H<sub>min</sub></span><span>2(H<sub>max</sub> − H<sub>min</sub>)</span></span></p>
+              <div class="advantage-scale" aria-label="Advantage ranges from negative one half at low entropy to negative one at high entropy"><span>lower entropy <strong>−0.5</strong></span><i><b></b></i><span>higher entropy <strong>−1.0</strong></span></div>
+              <p class="equation-footnote">The conceptual form is shown here; implementations should guard the degenerate case where all selected-token entropies are identical.</p>
+            </div>
+            <p>This is On-Policy Self-Adaptation, or <strong>OPSA</strong>. The objective uses the same policy-gradient machinery, but its token-level advantages come entirely from the student’s own distribution. There is no teacher forward pass, no answer label, no verifier reward, and no reference hint. Training still needs prompts; it does not need supervision attached to them.</p>
+            <figure class="figure-wide">
+              <button class="zoom-trigger" type="button" data-zoom="assets/entropy-advantage.webp" data-caption="Training dynamics for positive, fixed, and negative correlations between advantage magnitude and token entropy.">
+                <img src="assets/entropy-advantage.webp" alt="Three plots showing performance, response length, and gradient norm when negative advantage magnitude is positively or negatively correlated with token entropy." width="2176" height="503" loading="lazy" />
+                <span class="zoom-hint" aria-hidden="true"><svg viewBox="0 0 18 18"><circle cx="8" cy="8" r="4.5" /><path d="m11.5 11.5 4 4M8 6v4M6 8h4" /></svg>Expand</span>
+              </button>
+              <figcaption><span>Figure 5</span> Scaling negative magnitude <em>with</em> entropy (δ = 1) reaches 50.0 Avg@4 on AIME24, compared with 35.13 for standard OPD in this controlled run.</figcaption>
+            </figure>
+          </section>
+
+          <section class="article-section reveal" id="mechanism" data-section="mechanism">
+            <div class="section-heading"><span class="section-number">04</span><div><p class="section-kicker">How it works</p><h2>Prune the tail, preserve the forks</h2></div></div>
+            <p class="lead">A negative update does not simply “make the model less confident.” Its effect depends on where the sampled token sits inside the distribution.</p>
+            <div class="mechanism-grid">
+              <article><div class="mechanism-visual tail-visual" aria-hidden="true"><i style="--h:86%"></i><i style="--h:68%"></i><i style="--h:55%"></i><i class="target" style="--h:18%"></i><i style="--h:12%"></i><span>↓</span><i style="--h:92%"></i><i style="--h:74%"></i><i style="--h:59%"></i><i class="target after" style="--h:8%"></i><i style="--h:7%"></i></div><span class="mechanism-label">Tail token</span><h3>Close unlikely branches</h3><p>When sampling lands in the tail, OPSA pushes that token down and returns its mass to more plausible alternatives.</p></article>
+              <article><div class="mechanism-visual fork-visual" aria-hidden="true"><i style="--h:78%"></i><i class="target" style="--h:70%"></i><i style="--h:65%"></i><i style="--h:20%"></i><i style="--h:12%"></i><span>↓</span><i style="--h:82%"></i><i class="target after" style="--h:54%"></i><i style="--h:76%"></i><i style="--h:22%"></i><i style="--h:13%"></i></div><span class="mechanism-label">High-entropy fork</span><h3>Share mass across alternatives</h3><p>When several head tokens compete, lowering the sampled one redistributes mass among the others instead of collapsing to a single path.</p></article>
+              <article><div class="mechanism-visual keep-visual" aria-hidden="true"><i style="--h:94%"></i><i style="--h:16%"></i><i style="--h:8%"></i><i style="--h:5%"></i><i style="--h:3%"></i><span>→</span><i style="--h:94%"></i><i style="--h:16%"></i><i style="--h:8%"></i><i style="--h:5%"></i><i style="--h:3%"></i></div><span class="mechanism-label">Confident position</span><h3>Leave certainty alone</h3><p>High-logp tokens at low-entropy positions are normally outside the selected 20%, preserving precise predictions.</p></article>
+            </div>
+            <figure class="figure-wide">
+              <button class="zoom-trigger" type="button" data-zoom="assets/distribution-shift.webp" data-caption="Four examples of how OPSA redistributes token probability at high- and low-entropy positions.">
+                <img src="assets/distribution-shift.webp" alt="Four before-and-after token distributions showing tail suppression, redistribution among head tokens, avoidance of low-confidence tails, and preservation of confident predictions." width="2387" height="1014" loading="lazy" />
+                <span class="zoom-hint" aria-hidden="true"><svg viewBox="0 0 18 18"><circle cx="8" cy="8" r="4.5" /><path d="m11.5 11.5 4 4M8 6v4M6 8h4" /></svg>Expand</span>
+              </button>
+              <figcaption><span>Figure 6</span> The same negative update produces different local effects. Selection by logp and scaling by entropy make that difference useful.</figcaption>
+            </figure>
+            <p>Reasoning often changes direction at high-entropy “fork” tokens—words such as <em>wait</em>, <em>but</em>, or <em>alternatively</em>. OPSA makes the head set more likely as a whole while keeping competition alive inside it. This offers a way to sharpen the distribution globally without erasing the branches that exploration needs.</p>
+          </section>
+
+          <section class="article-section reveal" id="evidence" data-section="evidence">
+            <div class="section-heading"><span class="section-number">05</span><div><p class="section-kicker">Evidence</p><h2>Self-adaptation changes both accuracy and behavior</h2></div></div>
+            <p class="lead">We trained on the questions from DAPO-17k without their answers, then evaluated across mathematical reasoning, code generation, and general question answering.</p>
+            <div class="result-cards">
+              <article><span class="result-benchmark">AIME24 · Avg@32</span><div><strong>13.44</strong><i>→</i><strong>48.85</strong></div><p>+263.5% relative</p></article>
+              <article><span class="result-benchmark">AIME25 · Avg@32</span><div><strong>9.69</strong><i>→</i><strong>35.31</strong></div><p>+264.4% relative</p></article>
+              <article><span class="result-benchmark">HMMT25 · Avg@32</span><div><strong>5.73</strong><i>→</i><strong>23.33</strong></div><p>+307.2% relative</p></article>
+            </div>
+            <div class="table-wrap" role="region" aria-label="Qwen3 and Qwen3.5 benchmark results" tabindex="0">
+              <div class="metric-guide" aria-label="Metric definitions"><span><strong>Avg@32</strong><small>Mean accuracy across 32 sampled responses</small></span><span><strong>Pass@32</strong><small>Problems solved by at least one of 32 samples</small></span></div>
+              <table>
+                <colgroup><col class="model-column" /><col class="metric-column" span="6" /></colgroup>
+                <caption>All models, non-thinking mode, 32 samples per problem</caption>
+                <thead><tr><th scope="col" rowspan="2">Model</th><th scope="colgroup" colspan="2">AIME24</th><th scope="colgroup" colspan="2">AIME25</th><th scope="colgroup" colspan="2">HMMT25</th></tr><tr><th class="metric-header avg-header" scope="col">Avg@32</th><th class="metric-header pass-header" scope="col">Pass@32</th><th class="metric-header avg-header" scope="col">Avg@32</th><th class="metric-header pass-header" scope="col">Pass@32</th><th class="metric-header avg-header" scope="col">Avg@32</th><th class="metric-header pass-header" scope="col">Pass@32</th></tr></thead>
+                <tbody>
+                  <tr class="model-group-row"><th scope="rowgroup" colspan="7">Qwen3-1.7B</th></tr>
+                  <tr><th scope="row">Base</th><td>13.44</td><td>40.00</td><td>9.69</td><td>30.00</td><td>5.73</td><td>23.33</td></tr>
+                  <tr class="highlight-row"><th scope="row">+ OPSA</th><td>48.85</td><td>80.00</td><td>35.31</td><td>66.67</td><td>23.33</td><td>50.00</td></tr>
+                  <tr class="delta-row"><th scope="row">Point gain</th><td>+35.41</td><td>+40.00</td><td>+25.62</td><td>+36.67</td><td>+17.60</td><td>+26.67</td></tr>
+                </tbody>
+                <tbody>
+                  <tr class="model-group-row"><th scope="rowgroup" colspan="7">Qwen3-4B</th></tr>
+                  <tr><th scope="row">Base</th><td>23.33</td><td>56.67</td><td>20.52</td><td>56.67</td><td>13.13</td><td>33.33</td></tr>
+                  <tr class="highlight-row"><th scope="row">+ OPSA</th><td>62.08</td><td>83.33</td><td>58.44</td><td>83.33</td><td>37.40</td><td>60.00</td></tr>
+                  <tr class="delta-row"><th scope="row">Point gain</th><td>+38.75</td><td>+26.66</td><td>+37.92</td><td>+26.66</td><td>+24.27</td><td>+26.67</td></tr>
+                </tbody>
+                <tbody>
+                  <tr class="model-group-row"><th scope="rowgroup" colspan="7">Qwen3.5-9B</th></tr>
+                  <tr><th scope="row">Base</th><td>76.35</td><td>93.33</td><td>56.04</td><td>93.33</td><td>44.48</td><td>86.67</td></tr>
+                  <tr class="highlight-row"><th scope="row">+ OPSA</th><td>87.81</td><td>96.67</td><td>76.98</td><td>96.67</td><td>67.40</td><td>93.33</td></tr>
+                  <tr class="delta-row"><th scope="row">Point gain</th><td>+11.46</td><td>+3.34</td><td>+20.94</td><td>+3.34</td><td>+22.92</td><td>+6.66</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>The improvement is not confined to a small base model. OPSA also lifts Qwen3-4B and Qwen3.5-9B, and produces gains on MBPP+ and GPQA-Diamond. Relative to the best compared baseline for each aggregate metric, the 1.7B model gains 11.04 points in mean Avg@32 and 8.89 points in mean Pass@32 across the three math benchmarks.</p>
+            <figure class="figure-wide">
+              <button class="zoom-trigger" type="button" data-zoom="assets/reflective-reasoning.webp" data-caption="Rollout length, reflective token counts, and the relationship between length and AIME24 performance.">
+                <img src="assets/reflective-reasoning.webp" alt="Plots showing longer responses during OPSA training, more reflective words after training, and a positive correlation between response length and AIME24 accuracy." width="2094" height="533" loading="lazy" />
+                <span class="zoom-hint" aria-hidden="true"><svg viewBox="0 0 18 18"><circle cx="8" cy="8" r="4.5" /><path d="m11.5 11.5 4 4M8 6v4M6 8h4" /></svg>Expand</span>
+              </button>
+              <figcaption><span>Figure 7</span> Rollouts become longer and contain more reflective turns. Across sampled responses, length and accuracy are positively correlated.</figcaption>
+            </figure>
+            <div class="evidence-split">
+              <div><p class="mini-kicker">A behavioral clue</p><h3>More “wait,” not just more tokens</h3><p>Response length rises through training, but the change is structured: reflective markers become much more frequent. Masking positions whose head set contains those fork tokens largely removes both the length growth and the accuracy gain.</p></div>
+              <div><p class="mini-kicker">A diversity check</p><h3>Diversity holds under our measures</h3><p>Across 32 responses per problem, pairwise 4-gram diversity approaches that of the base model. Together with the Pass@32 gains, we observe no diversity collapse under these two measures.</p></div>
+            </div>
+            <figure class="figure-wide">
+              <button class="zoom-trigger" type="button" data-zoom="assets/reasoning-diversity.webp" data-caption="Tree-style reasoning intuition and pairwise 4-gram Jaccard distance by response length.">
+                <img src="assets/reasoning-diversity.webp" alt="A branching reasoning diagram and two plots showing that the diversity gap between base and OPSA responses narrows with response length." width="1936" height="575" loading="lazy" />
+                <span class="zoom-hint" aria-hidden="true"><svg viewBox="0 0 18 18"><circle cx="8" cy="8" r="4.5" /><path d="m11.5 11.5 4 4M8 6v4M6 8h4" /></svg>Expand</span>
+              </button>
+              <figcaption><span>Figure 8</span> As responses grow, repeated fork opportunities preserve tree-like variation; the diversity gap between the base and adapted policy approaches zero.</figcaption>
+            </figure>
+          </section>
+
+          <div class="closing-card">
+            <p class="closing-kicker">The paper in one sentence</p><h2>OPD can work by suppressing unlikely sampled tokens—not by copying a teacher.</h2><p>That mechanism motivates OPSA: select the lowest-logp 20% and scale a negative update with the student’s own entropy, enabling self-improvement without teacher logits, rewards, or hints.</p>
+            <div class="closing-actions"><a class="button button-primary" href="https://huggingface.co/collections/Tuwhy/on-policy-self-adaptation" target="_blank" rel="noreferrer">View models &amp; checkpoints</a></div>
+          </div>
+        </article>
+      </div>
+    </main>
+
+    <footer class="site-footer page-wide">
+      <a class="wordmark footer-wordmark" href="#top"><span class="wordmark-mark" aria-hidden="true">O</span><span>OPSA</span></a>
+      <p>On-Policy Self-Adaptation · A visual research explainer</p>
+      <div><a href="https://huggingface.co/collections/Tuwhy/on-policy-self-adaptation" target="_blank" rel="noreferrer">Hugging Face</a><a href="#top">Back to top ↑</a></div>
+    </footer>
+
+    <dialog class="image-dialog" id="image-dialog" aria-label="Expanded figure">
+      <form method="dialog"><button type="submit" aria-label="Close expanded figure"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 4 12 12M16 4 4 16" /></svg></button></form>
+      <div class="dialog-inner"><img src="" alt="" /><p></p></div>
+    </dialog>
+  </body>
+</html>
