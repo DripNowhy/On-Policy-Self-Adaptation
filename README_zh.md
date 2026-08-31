@@ -6,8 +6,7 @@
 
 [![Code](https://img.shields.io/badge/CODE-000000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/DripNowhy/On-Policy-Self-Adaptation)
 [![W&B Logs](https://img.shields.io/badge/W%26B%20TRAINING%20LOGS-%2300B4AB?style=for-the-badge&logo=weightsandbiases&logoColor=white&labelColor=000000)](https://wandb.ai/whywhyyy0731-purdue-university/opsa/workspace)
-[![Reproduce](https://img.shields.io/badge/REPRODUCE-%23FFD14D?style=for-the-badge&logo=gnubash&logoColor=black)](#reproduce-opsa)
-[![Slime](https://img.shields.io/badge/BUILT%20ON%20SLIME-6F42C1?style=for-the-badge&logo=python&logoColor=white)](https://github.com/THUDM/slime)
+[![Checkpoints](https://img.shields.io/badge/CHECKPOINTS-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/collections/Tuwhy/on-policy-self-adaptation)
 [![License](https://img.shields.io/badge/APACHE--2.0-A42C25?style=for-the-badge&logo=apache&logoColor=white)](LICENSE)
 
 [English](README.md) · **中文**
