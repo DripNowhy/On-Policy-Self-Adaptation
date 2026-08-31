@@ -5,7 +5,7 @@
 **只使用当前策略自身的 token probability 和 entropy 进行无需 teacher 的 on-policy 训练。**
 
 [![Code](https://img.shields.io/badge/CODE-000000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/DripNowhy/On-Policy-Self-Adaptation)
-[![W&B Logs](https://img.shields.io/badge/W%26B%20TRAINING%20LOGS-%2300B4AB?style=for-the-badge&logo=weightsandbiases&logoColor=white&labelColor=000000)](https://wandb.ai/whywhyyy0731-purdue-university/opsa/workspace)
+[![W&B Logs](https://img.shields.io/badge/W%26B%20TRAINING%20LOGS-%2300B4AB?style=for-the-badge&logo=weightsandbiases&logoColor=white&labelColor=000000)](https://wandb.ai/whywhyyy0731-purdue-university/opsa-public/workspace?nw=nwuserwhywhyyy0731)
 [![Checkpoints](https://img.shields.io/badge/CHECKPOINTS-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/collections/Tuwhy/on-policy-self-adaptation)
 [![License](https://img.shields.io/badge/APACHE--2.0-A42C25?style=for-the-badge&logo=apache&logoColor=white)](LICENSE)
 
@@ -152,7 +152,7 @@ bash examples/opsa/run_opsa.sh \
 ## 训练日志
 
 训练曲线和指标可以参考
-[公开 W&B workspace](https://wandb.ai/whywhyyy0731-purdue-university/opsa/workspace)。
+[公开 W&B workspace](https://wandb.ai/whywhyyy0731-purdue-university/opsa-public/workspace?nw=nwuserwhywhyyy0731)。
 
 <a id="license"></a>
 
