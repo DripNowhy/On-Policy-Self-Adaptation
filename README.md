@@ -1,9 +1,10 @@
 <div align="center">
 
-# OPSA: On-Policy Self-Adaptation
+# Does On-Policy Distillation Really Distill? From Noisy Teacher to Self-Improvement
 
 **Teacher-free on-policy training from the policy's own token probabilities and entropies.**
 
+[![Paper](https://img.shields.io/badge/PAPER-arXiv%3A2608.31046-B31B1B?style=for-the-badge&logo=arxiv&logoColor=white)](https://arxiv.org/pdf/2608.31046)
 [![Code](https://img.shields.io/badge/CODE-000000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/DripNowhy/On-Policy-Self-Adaptation)
 [![Blog](https://img.shields.io/badge/BLOG-2F6BFF?style=for-the-badge&logo=githubpages&logoColor=white)](https://dripnowhy.github.io/On-Policy-Self-Adaptation/)
 [![W&B Logs](https://img.shields.io/badge/W%26B%20TRAINING%20LOGS-%2300B4AB?style=for-the-badge&logo=weightsandbiases&logoColor=white&labelColor=000000)](https://wandb.ai/whywhyyy0731-purdue-university/opsa-public/workspace?nw=nwuserwhywhyyy0731)
