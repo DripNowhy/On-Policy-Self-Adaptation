@@ -10,11 +10,11 @@
     />
     <meta name="theme-color" content="#f8f6f0" />
     <meta property="og:type" content="article" />
-    <meta property="og:title" content="Does On-Policy Distillation Really Distill?" />
+    <meta property="og:title" content="Does On-Policy Distillation Really Distill? From Noisy Teacher to Self-Improvement" />
     <meta property="og:description" content="From noisy teacher to self-improvement." />
     <meta property="og:image" content="assets/opsa-overview.webp" />
     <meta name="twitter:card" content="summary_large_image" />
-    <title>Does On-Policy Distillation Really Distill? · OPSA</title>
+    <title>Does On-Policy Distillation Really Distill? From Noisy Teacher to Self-Improvement</title>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
     <link rel="preload" href="assets/dm-sans.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="assets/newsreader.woff2" as="font" type="font/woff2" crossorigin />
@@ -45,6 +45,10 @@
           <a href="#evidence">Evidence</a>
         </div>
         <div class="nav-actions">
+          <a class="nav-external" href="https://arxiv.org/pdf/2608.31046" target="_blank" rel="noreferrer">
+            Paper
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 11.5 11.5 4.5M6 4.5h5.5V10" /></svg>
+          </a>
           <a class="nav-external" href="https://huggingface.co/collections/Tuwhy/on-policy-self-adaptation" target="_blank" rel="noreferrer">
             Models
             <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 11.5 11.5 4.5M6 4.5h5.5V10" /></svg>
@@ -70,7 +74,11 @@
             <span>Yi Ding</span><span class="byline-separator" aria-hidden="true">×</span><span>Ruqi Zhang</span>
           </div>
           <div class="hero-actions">
-            <a class="button button-primary" href="#puzzle">
+            <a class="button button-primary" href="https://arxiv.org/pdf/2608.31046" target="_blank" rel="noreferrer">
+              Read the paper
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 11.5 11.5 4.5M6 4.5h5.5V10" /></svg>
+            </a>
+            <a class="button button-secondary" href="#puzzle">
               Read the story
               <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M9 3v11M4.5 9.5 9 14l4.5-4.5" /></svg>
             </a>
@@ -295,7 +303,7 @@
 
           <div class="closing-card">
             <p class="closing-kicker">The paper in one sentence</p><h2>OPD can work by suppressing unlikely sampled tokens—not by copying a teacher.</h2><p>That mechanism motivates OPSA: select the lowest-logp 20% and scale a negative update with the student’s own entropy, enabling self-improvement without teacher logits, rewards, or hints.</p>
-            <div class="closing-actions"><a class="button button-primary" href="https://huggingface.co/collections/Tuwhy/on-policy-self-adaptation" target="_blank" rel="noreferrer">View models &amp; checkpoints</a></div>
+            <div class="closing-actions"><a class="button button-primary" href="https://arxiv.org/pdf/2608.31046" target="_blank" rel="noreferrer">Read the paper</a><a class="button button-secondary" href="https://huggingface.co/collections/Tuwhy/on-policy-self-adaptation" target="_blank" rel="noreferrer">View models &amp; checkpoints</a></div>
           </div>
         </article>
       </div>
@@ -303,8 +311,8 @@
 
     <footer class="site-footer page-wide">
       <a class="wordmark footer-wordmark" href="#top"><span class="wordmark-mark" aria-hidden="true">O</span><span>OPSA</span></a>
-      <p>On-Policy Self-Adaptation · A visual research explainer</p>
-      <div><a href="https://huggingface.co/collections/Tuwhy/on-policy-self-adaptation" target="_blank" rel="noreferrer">Hugging Face</a><a href="#top">Back to top ↑</a></div>
+      <p>Does On-Policy Distillation Really Distill? · A visual research explainer</p>
+      <div><a href="https://arxiv.org/pdf/2608.31046" target="_blank" rel="noreferrer">Paper</a><a href="https://github.com/DripNowhy/On-Policy-Self-Adaptation" target="_blank" rel="noreferrer">Code</a><a href="https://huggingface.co/collections/Tuwhy/on-policy-self-adaptation" target="_blank" rel="noreferrer">Hugging Face</a><a href="#top">Back to top ↑</a></div>
     </footer>
 
     <dialog class="image-dialog" id="image-dialog" aria-label="Expanded figure">
