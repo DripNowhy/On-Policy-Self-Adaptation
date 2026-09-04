@@ -21,6 +21,7 @@
 </p>
 <p>
   <a href="#training-logs">📈 训练日志</a> •
+  <a href="#citation">📝 引用</a> •
   <a href="#license">📄 许可证</a>
 </p>
 
@@ -155,6 +156,21 @@ bash examples/opsa/run_opsa.sh \
 
 训练曲线和指标可以参考
 [公开 W&B workspace](https://wandb.ai/whywhyyy0731-purdue-university/opsa-public/workspace?nw=nwuserwhywhyyy0731)。
+
+<a id="citation"></a>
+
+## 引用
+
+如果这项工作对你有帮助，请引用：
+
+```bibtex
+@article{ding2026does,
+  title={Does On-Policy Distillation Really Distill? From Noisy Teacher to Self-Improvement},
+  author={Ding, Yi and Zhang, Ruqi},
+  journal={arXiv preprint arXiv:2608.31046},
+  year={2026}
+}
+```
 
 <a id="license"></a>
 

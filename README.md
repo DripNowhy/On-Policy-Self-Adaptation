@@ -21,6 +21,7 @@
 </p>
 <p>
   <a href="#training-logs">📈 Training Logs</a> •
+  <a href="#citation">📝 Citation</a> •
   <a href="#license">📄 License</a>
 </p>
 
@@ -160,6 +161,21 @@ other supported models.
 
 Reference training curves and metrics are available in the
 [public W&B workspace](https://wandb.ai/whywhyyy0731-purdue-university/opsa-public/workspace?nw=nwuserwhywhyyy0731).
+
+<a id="citation"></a>
+
+## Citation
+
+If you find this work useful, please cite:
+
+```bibtex
+@article{ding2026does,
+  title={Does On-Policy Distillation Really Distill? From Noisy Teacher to Self-Improvement},
+  author={Ding, Yi and Zhang, Ruqi},
+  journal={arXiv preprint arXiv:2608.31046},
+  year={2026}
+}
+```
 
 <a id="license"></a>
 
