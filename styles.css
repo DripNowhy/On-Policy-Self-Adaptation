@@ -1841,6 +1841,49 @@ tbody tr:last-child td {
   font: 400 13px/1.52 var(--sans);
 }
 
+.citation-card {
+  width: min(900px, calc(100vw - 48px));
+  margin: 0 0 32px 50%;
+  padding: clamp(28px, 4vw, 42px);
+  scroll-margin-top: 96px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(-50%);
+}
+
+.citation-card .citation-kicker {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font: 650 11px/1 var(--sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.citation-card h2 {
+  margin: 0 0 20px;
+  font-family: var(--serif);
+  font-size: clamp(34px, 4vw, 46px);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.citation-card pre {
+  margin: 0;
+  padding: 20px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--ink-soft);
+  background: var(--paper-deep);
+}
+
+.citation-card code {
+  font: 400 13px/1.65 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
 .closing-card {
   position: relative;
   width: min(900px, calc(100vw - 48px));
@@ -2425,6 +2468,7 @@ tbody tr:last-child td {
   .table-wrap,
   .evidence-split,
   .boundary-list,
+  .citation-card,
   .closing-card {
     width: calc(100vw - 28px);
   }
