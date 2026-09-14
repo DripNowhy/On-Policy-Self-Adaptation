@@ -14,6 +14,7 @@
 **English** · [中文](README_zh.md)
 
 <p>
+  <a href="#news">📰 News</a> •
   <a href="#introduction">📖 Introduction</a> •
   <a href="#results">📊 Results</a> •
   <a href="#reproduce-opsa">🚀 Reproduce OPSA</a> •
@@ -26,6 +27,15 @@
 </p>
 
 </div>
+
+<a id="news"></a>
+
+## News
+
+- **[2026-09-14]** Released [Olmo-3-7B-Think-OPSA](https://huggingface.co/Tuwhy/Olmo-3-7B-Think-OPSA), our OPSA-trained OLMo 3 Think model.
+- **[2026-09-03]** Released [Olmo-3-7B-Instruct-OPSA](https://huggingface.co/Tuwhy/Olmo-3-7B-Instruct-OPSA), our OPSA-trained OLMo 3 Instruct model.
+- **[2026-09-01]** Our paper ranked **#1 on [Hugging Face Daily Papers](https://huggingface.co/papers/date/2026-09-01)**! Thank you for your interest and support.
+- **[2026-08-31]** Released our [paper](https://arxiv.org/abs/2608.31046), [code](https://github.com/DripNowhy/On-Policy-Self-Adaptation), and OPSA-trained Qwen-series checkpoints: [Qwen3-1.7B](https://huggingface.co/Tuwhy/Qwen3-1.7B-OPSA), [Qwen3-4B](https://huggingface.co/Tuwhy/Qwen3-4B-OPSA), and [Qwen3.5-9B](https://huggingface.co/Tuwhy/Qwen3.5-9B-OPSA).
 
 <a id="introduction"></a>
 

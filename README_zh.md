@@ -14,6 +14,7 @@
 [English](README.md) · **中文**
 
 <p>
+  <a href="#news">📰 最新动态</a> •
   <a href="#introduction">📖 简介</a> •
   <a href="#results">📊 结果</a> •
   <a href="#reproduce-opsa">🚀 复现 OPSA</a> •
@@ -26,6 +27,15 @@
 </p>
 
 </div>
+
+<a id="news"></a>
+
+## 最新动态
+
+- **[2026-09-14]** 发布使用 OPSA 训练的 OLMo 3 Think 模型：[Olmo-3-7B-Think-OPSA](https://huggingface.co/Tuwhy/Olmo-3-7B-Think-OPSA)。
+- **[2026-09-03]** 发布使用 OPSA 训练的 OLMo 3 Instruct 模型：[Olmo-3-7B-Instruct-OPSA](https://huggingface.co/Tuwhy/Olmo-3-7B-Instruct-OPSA)。
+- **[2026-09-01]** 我们的论文登上 **[Hugging Face Daily Papers](https://huggingface.co/papers/date/2026-09-01) 第一名**！感谢大家的关注与支持。
+- **[2026-08-31]** 发布[论文](https://arxiv.org/abs/2608.31046)、[代码](https://github.com/DripNowhy/On-Policy-Self-Adaptation)，以及使用 OPSA 训练的 Qwen 系列模型：[Qwen3-1.7B](https://huggingface.co/Tuwhy/Qwen3-1.7B-OPSA)、[Qwen3-4B](https://huggingface.co/Tuwhy/Qwen3-4B-OPSA) 和 [Qwen3.5-9B](https://huggingface.co/Tuwhy/Qwen3.5-9B-OPSA)。
 
 <a id="introduction"></a>
 
