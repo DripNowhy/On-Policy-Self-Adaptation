@@ -35,7 +35,8 @@ Usage:
   bash examples/opsa/run_opsa.sh [options]
 
 Method:
-  --model NAME                qwen3-1.7b, qwen3-4b, or qwen3.5-9b
+  --model NAME                qwen3-1.7b, qwen3-4b, qwen3.5-9b,
+                              olmo3-7b-instruct, olmo3-7b-instruct-sft, or olmo3-7b-think
   --preset NAME               opsa, fixed-negative, or fixed-positive
   --fraction FLOAT            Lowest-token fraction in (0, 1] (default: 0.2)
   --steps INTEGER             Override the model preset's training steps
@@ -222,7 +223,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 case "$MODEL" in
-   qwen3-1.7b|qwen3-4b|qwen3.5-9b) ;;
+   qwen3-1.7b|qwen3-4b|qwen3.5-9b|olmo3-7b-instruct|olmo3-7b-instruct-sft|olmo3-7b-think) ;;
    *) die "unsupported model '$MODEL'" ;;
 esac
 
@@ -275,6 +276,8 @@ if [ -n "$WANDB_PROJECT" ]; then
 fi
 
 source "${SCRIPT_DIR}/models/${MODEL}.sh"
+DISABLE_THINKING="${DISABLE_THINKING:-true}"
+PIPELINE_MODEL_PARALLEL_SIZE="${PIPELINE_MODEL_PARALLEL_SIZE:-1}"
 MODEL_CONFIG="${SLIME_ROOT}/${MODEL_CONFIG_RELATIVE}"
 if [ ! -f "$MODEL_CONFIG" ]; then
    die "model definition not found: $MODEL_CONFIG"
@@ -285,8 +288,9 @@ if [ -n "$NUM_ROLLOUT_OVERRIDE" ]; then
 fi
 
 TOTAL_GPUS=$((ACTOR_GPUS + ROLLOUT_GPUS))
-if [ $((ACTOR_GPUS % TENSOR_MODEL_PARALLEL_SIZE)) -ne 0 ]; then
-   die "actor GPUs must be divisible by tensor model parallel size"
+ACTOR_MODEL_PARALLEL_SIZE=$((TENSOR_MODEL_PARALLEL_SIZE * PIPELINE_MODEL_PARALLEL_SIZE))
+if [ $((ACTOR_GPUS % ACTOR_MODEL_PARALLEL_SIZE)) -ne 0 ]; then
+   die "actor GPUs must be divisible by tensor × pipeline model parallel size"
 fi
 if [ $((ROLLOUT_GPUS % ROLLOUT_GPUS_PER_ENGINE)) -ne 0 ]; then
    die "rollout GPUs must be divisible by rollout GPUs per engine"
@@ -387,7 +391,6 @@ ROLLOUT_ARGS=(
    --prompt-data "$PROMPT_DATA"
    --input-key prompt
    --apply-chat-template
-   --disable-thinking
    --rollout-shuffle
    --num-rollout "$NUM_ROLLOUT"
    --rollout-batch-size 64
@@ -400,6 +403,9 @@ ROLLOUT_ARGS=(
    --custom-rm-path slime.rollout.opsa.reward_func
    --custom-reward-post-process-path slime.rollout.opsa.post_process_rewards
 )
+if [ "$DISABLE_THINKING" = true ]; then
+   ROLLOUT_ARGS+=(--disable-thinking)
+fi
 
 EVAL_ARGS=(
    --eval-interval 20
@@ -418,7 +424,7 @@ EVAL_ARGS=(
 PERF_ARGS=(
    --tensor-model-parallel-size "$TENSOR_MODEL_PARALLEL_SIZE"
    --sequence-parallel
-   --pipeline-model-parallel-size 1
+   --pipeline-model-parallel-size "$PIPELINE_MODEL_PARALLEL_SIZE"
    --context-parallel-size 1
    --expert-model-parallel-size 1
    --expert-tensor-parallel-size 1
@@ -455,6 +461,9 @@ SGLANG_ARGS=(
    --rollout-num-gpus-per-engine "$ROLLOUT_GPUS_PER_ENGINE"
    --sglang-mem-fraction-static "$SGLANG_MEM_FRACTION_STATIC"
 )
+if [ -n "${SGLANG_CUDA_GRAPH_MAX_BS:-}" ]; then
+   SGLANG_ARGS+=(--sglang-cuda-graph-max-bs "$SGLANG_CUDA_GRAPH_MAX_BS")
+fi
 
 WANDB_ARGS=()
 if [ -n "$WANDB_PROJECT" ]; then
@@ -527,7 +536,7 @@ echo "Model:               $MODEL_DISPLAY_NAME"
 echo "Preset:              $PRESET"
 echo "Lowest fraction:     $TOKEN_FRACTION"
 echo "Actor/Rollout GPUs:  ${ACTOR_GPUS}/${ROLLOUT_GPUS}"
-echo "Training TP:         $TENSOR_MODEL_PARALLEL_SIZE"
+echo "Training TP/PP:      ${TENSOR_MODEL_PARALLEL_SIZE}/${PIPELINE_MODEL_PARALLEL_SIZE}"
 echo "Training steps:      $NUM_ROLLOUT"
 echo "Rollout/Eval length: ${ROLLOUT_MAX_RESPONSE_LEN}/${EVAL_MAX_RESPONSE_LEN}"
 echo "Checkpoint mode:     $([ "$LIGHT_CHECKPOINT" = true ] && echo light || echo resumable)"

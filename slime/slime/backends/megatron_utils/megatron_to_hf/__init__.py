@@ -4,6 +4,7 @@ from .glm4moe import convert_glm4moe_to_hf
 from .gpt_oss import convert_gpt_oss_to_hf
 from .llama import convert_llama_to_hf
 from .mimo import convert_mimo_to_hf
+from .olmo3 import convert_olmo3_to_hf
 from .processors import quantize_params, remove_padding
 from .qwen2 import convert_qwen2_to_hf
 from .qwen3_5 import convert_qwen3_5_to_hf
@@ -52,6 +53,8 @@ def _convert_to_hf_core(args, model_name, name, param):
         converted_named_tensors = convert_qwen3vl_to_hf(args, name, param)
     elif "qwen2" in model_name or "qwen3" in model_name:
         converted_named_tensors = convert_qwen2_to_hf(args, name, param)
+    elif "olmo3" in model_name:
+        converted_named_tensors = convert_olmo3_to_hf(args, name, param)
     elif "llama" in model_name:
         converted_named_tensors = convert_llama_to_hf(args, name, param)
     elif "mimo" in model_name:

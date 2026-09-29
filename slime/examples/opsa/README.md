@@ -35,15 +35,21 @@ no reference-model forward pass or KL loss is used.
 
 ## Model presets
 
-| `--model` | Steps | Actor / rollout GPUs | Training TP | Rollout / eval length | Max tokens/GPU |
+| `--model` | Steps | Actor / rollout GPUs | Training TP / PP | Rollout / eval length | Max tokens/GPU |
 |---|---:|---:|---:|---:|---:|
-| `qwen3-1.7b` | 700 | 4 / 4 | 1 | 12,000 / 32,768 | 16,384 |
-| `qwen3-4b` (Base) | 1,000 | 4 / 4 | 2 | 12,000 / 32,768 | 24,576 |
-| `qwen3.5-9b` | 1,000 | 2 / 6 | 2 | 16,384 / 32,768 | 32,768 |
+| `qwen3-1.7b` | 700 | 4 / 4 | 1 / 1 | 12,000 / 32,768 | 16,384 |
+| `qwen3-4b` (Base) | 1,000 | 4 / 4 | 2 / 1 | 12,000 / 32,768 | 24,576 |
+| `qwen3.5-9b` | 1,000 | 2 / 6 | 2 / 1 | 16,384 / 32,768 | 32,768 |
+| `olmo3-7b-instruct` | 1,000 | 4 / 4 | 1 / 2 | 16,384 / 32,768 | 16,384 |
+| `olmo3-7b-instruct-sft` | 1,000 | 4 / 4 | 1 / 2 | 10,000 / 32,768 | 16,384 |
+| `olmo3-7b-think` | 1,000 | 4 / 4 | 1 / 2 | 12,000 / 32,768 | 16,384 |
 
-All presets use non-thinking rollout, batch size 64, learning rate `1e-6`, and
-save/evaluation interval 20. Qwen3.5-9B additionally enables optimizer CPU
-offload. Install its optional linear-attention dependency with:
+All presets use batch size 64, learning rate `1e-6`, and save/evaluation
+interval 20. Qwen presets disable thinking; OLMo uses each checkpoint's native
+chat template, including reasoning for Think. OLMo requires training TP=1
+because Q/K RMSNorm spans complete projections; PP=2 and chunked log-probability
+computation reduce memory use. Qwen3.5-9B and OLMo enable optimizer CPU offload.
+Install Qwen3.5-9B's optional linear-attention dependency with:
 
 ```bash
 pip install -e '.[qwen35]'
@@ -57,7 +63,7 @@ project directory, select the model definition and convert it:
 
 ```bash
 export PYTHONPATH="${MEGATRON_PATH}${PYTHONPATH:+:${PYTHONPATH}}"
-source scripts/models/qwen3-1.7B.sh  # or qwen3-4B.sh / qwen3.5-9B.sh
+source scripts/models/qwen3-1.7B.sh  # or qwen3-4B.sh / qwen3.5-9B.sh / olmo3-7B-Instruct.sh
 
 torchrun --nproc-per-node 1 tools/convert_hf_to_torch_dist.py \
   "${MODEL_ARGS[@]}" \
@@ -67,6 +73,13 @@ torchrun --nproc-per-node 1 tools/convert_hf_to_torch_dist.py \
 
 Set `HF_CHECKPOINT`, `ACTOR_CHECKPOINT`, and `MEGATRON_PATH` to external paths;
 models and Megatron-LM are intentionally not bundled in this repository.
+
+All three OLMo presets share `scripts/models/olmo3-7B-Instruct.sh`. Convert the
+matching `allenai/Olmo-3-7B-Instruct`, `allenai/Olmo-3-7B-Instruct-SFT`, or
+`allenai/Olmo-3-7B-Think` HF checkpoint with that definition, then select the
+corresponding `--model` below. The custom model uses Megatron's post-residual-branch
+norms, sliding-window attention, and YaRN APIs; use a Megatron-LM checkout that
+provides these interfaces.
 
 ## Run
 
@@ -94,6 +107,14 @@ bash examples/opsa/run_opsa.sh \
   --prompt-data "${TRAIN_DATA}" \
   --eval-data "${EVAL_DATA}" \
   --megatron-path "${MEGATRON_PATH}"
+```
+
+For OLMo, use the same command with `--model olmo3-7b-instruct`,
+`--model olmo3-7b-instruct-sft`, or `--model olmo3-7b-think` and the matching
+checkpoint paths. For example, inspect the Think configuration with:
+
+```bash
+bash examples/opsa/run_opsa.sh --model olmo3-7b-think --dry-run
 ```
 
 Choose `--preset fixed-negative` or `--preset fixed-positive` for the two fixed
@@ -195,6 +216,6 @@ every generated command without starting Ray or training.
 
 This open-source configuration is CPU/CLI validated: selector and argument
 behavior is covered by CPU tests, and every model/method launcher is exercised
-with `--dry-run`. The three model presets have not been re-run end to end on GPUs
+with `--dry-run`. The model presets have not been re-run end to end on GPUs
 as part of this cleanup, so the validation status must not be interpreted as a
 new reproduction of their training results.

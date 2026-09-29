@@ -160,6 +160,10 @@ bash examples/opsa/run_opsa.sh \
 启动的集群。已有 Ray 集群和其他模型的用法见
 [launcher 说明](slime/examples/opsa/README.md)。
 
+OLMo 3 训练可通过 `--model olmo3-7b-instruct`、`olmo3-7b-instruct-sft`
+或 `olmo3-7b-think` 启动，模型配置和权重转换见
+[训练指南](slime/examples/opsa/README.md#model-presets)。
+
 <a id="training-logs"></a>
 
 ## 训练日志

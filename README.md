@@ -165,6 +165,10 @@ only the cluster it started. See the
 [launcher guide](slime/examples/opsa/README.md) for existing Ray clusters and the
 other supported models.
 
+OLMo 3 training is available through `--model olmo3-7b-instruct`,
+`olmo3-7b-instruct-sft`, and `olmo3-7b-think`; see the
+[model presets and checkpoint conversion guide](slime/examples/opsa/README.md#model-presets).
+
 <a id="training-logs"></a>
 
 ## Training logs
